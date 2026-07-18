@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenTrace</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="hero">
+    <div class="hero-card">
+      <p class="eyebrow">Local-first feed analysis</p>
+      <h1>OpenTrace</h1>
+      <p class="subtitle">
+        Understand what shapes your feed, spot manipulation patterns, and explore healthier alternatives.
+      </p>
+      <div class="actions">
+        <button id="startBtn">Start exploring</button>
+      </div>
+      <div class="upload-box">
+        <input id="fileInput" type="file" />
+      </div>
+      <pre id="resultOutput" class="result-output">No file uploaded yet.</pre>
+      <p id="status" class="status">The app is ready to launch locally.</p>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script src="js/bridge.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.pylance",
+    "ms-python.debugpy",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "wayou.vscode-todo-highlight",
+    "rangav.vscode-thunder-client",
+    "oderwat.indent-rainbow"
+  ]
+}
