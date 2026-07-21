@@ -20,6 +20,7 @@ class Settings:
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = "mistral"
     app_port: int = 8000
+    analysis_days: int = 180
 
 
 def get_settings() -> Settings:
@@ -29,4 +30,5 @@ def get_settings() -> Settings:
         ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
         ollama_model=os.getenv("OLLAMA_MODEL", "mistral"),
         app_port=int(os.getenv("APP_PORT", "8000")),
+        analysis_days=int(os.getenv("ANALYSIS_DAYS", "180")),
     )
