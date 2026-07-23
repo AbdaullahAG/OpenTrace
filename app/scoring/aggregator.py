@@ -12,12 +12,14 @@ from app.llm.classifier import classify_topics
 from app.llm.ollama_client import OllamaClient, OllamaError
 from app.scoring.concentration import calculate_concentration, topic_distribution
 from app.scoring.diversity import calculate_diversity, top_channels
+from app.scoring.exposure import algorithmic_exposure_share
 from app.scoring.security import sanitize_items
 from app.scoring.timeline import build_timeline
 
 _HIGH_CONCENTRATION = 0.7
 _LOW_DIVERSITY = 0.3
 _DOMINANT_CHANNEL_SHARE = 0.5
+_HIGH_ALGORITHMIC_EXPOSURE = 0.7
 
 
 def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -> dict:
@@ -44,11 +46,13 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
 
     diversity_score = calculate_diversity(clean_items)
     concentration_score = calculate_concentration(clean_items) if ai_available else 0.0
+    exposure_score = algorithmic_exposure_share(clean_items)
 
     bubble_score = round(
         100 * (
             SCORE_WEIGHTS["diversity"] * (1 - diversity_score)
             + SCORE_WEIGHTS["concentration"] * concentration_score
+            + SCORE_WEIGHTS["algorithmic_exposure"] * exposure_score
             + SCORE_WEIGHTS["manipulation"] * _manipulation_weight(clean_items)
         )
     )
@@ -57,9 +61,10 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
         "bubble_score": bubble_score,
         "diversity_score": diversity_score,
         "concentration_score": concentration_score,
+        "algorithmic_exposure_score": exposure_score,
         "topic_distribution": topic_distribution(clean_items),
         "top_channels": top_channels(clean_items),
-        "manipulation_flags": _manipulation_flags(diversity_score, concentration_score, clean_items),
+        "manipulation_flags": _manipulation_flags(diversity_score, concentration_score, exposure_score, clean_items),
         "timeline": build_timeline(clean_items),
         "ai_available": ai_available,
         "metadata": {
@@ -88,12 +93,19 @@ def _manipulation_weight(items: list[dict]) -> float:
     return channels[0]["share"] if channels else 0.0
 
 
-def _manipulation_flags(diversity_score: float, concentration_score: float, items: list[dict]) -> list[str]:
+def _manipulation_flags(
+    diversity_score: float,
+    concentration_score: float,
+    exposure_score: float,
+    items: list[dict],
+) -> list[str]:
     flags = []
     if diversity_score < _LOW_DIVERSITY:
         flags.append("low_source_diversity")
     if concentration_score > _HIGH_CONCENTRATION:
         flags.append("high_topic_concentration")
+    if exposure_score > _HIGH_ALGORITHMIC_EXPOSURE:
+        flags.append("high_algorithmic_exposure")
 
     dominant = top_channels(items, limit=1)
     if dominant and dominant[0]["share"] > _DOMINANT_CHANNEL_SHARE:
@@ -107,6 +119,7 @@ def _empty_report() -> dict:
         "bubble_score": 0,
         "diversity_score": 0.0,
         "concentration_score": 0.0,
+        "algorithmic_exposure_score": 0.0,
         "topic_distribution": {},
         "top_channels": [],
         "manipulation_flags": [],

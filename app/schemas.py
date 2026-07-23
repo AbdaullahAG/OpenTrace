@@ -26,6 +26,7 @@ class BubbleReport(TypedDict):
     bubble_score: int              # 0-100, higher = stronger filter bubble
     diversity_score: float         # 0-1, higher = more diverse sources
     concentration_score: float     # 0-1, higher = more concentrated topics
+    algorithmic_exposure_score: float  # 0-1, share of content from unsubscribed channels
     topic_distribution: dict[str, int]
     top_channels: list[dict]
     manipulation_flags: list[str]

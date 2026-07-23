@@ -21,9 +21,10 @@ TOPIC_CATEGORIES: tuple[str, ...] = (
 
 # Weights must sum to 1.0 — used by aggregator.py to compute the final score.
 SCORE_WEIGHTS: dict[str, float] = {
-    "diversity": 0.40,
-    "concentration": 0.35,
-    "manipulation": 0.25,
+    "diversity": 0.30,
+    "concentration": 0.25,
+    "algorithmic_exposure": 0.30,
+    "manipulation": 0.15,
 }
 
 # Defensive limits — protect the LLM call and the app from oversized input.
