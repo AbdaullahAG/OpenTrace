@@ -107,7 +107,12 @@ class YoutubeParser:
         try:
             with open(self.watch_history_path, "rb") as f:
                 for item in ijson.items(f, "item"):
-                    title_url = item.get("titleUrl", "")
+                    # 1. التأكد أن العنصر ليس None أو فارغ
+                    if not item or not isinstance(item, dict):
+                        continue
+
+                    # 2. جلب رابط الفيديو بأمان
+                    title_url = item.get("titleUrl") or ""
 
                     # regular videos only
                     if "watch?v=" not in title_url:
@@ -115,29 +120,37 @@ class YoutubeParser:
 
                     # extract video_id
                     parsed   = urlparse(title_url)
-                    video_id = parse_qs(parsed.query).get("v", [""])[0]
+                    v_params = parse_qs(parsed.query) or {}
+                    v_list   = v_params.get("v") or [""]
+                    video_id = v_list[0] if v_list else ""
+                    
                     if not video_id:
                         continue
 
                     # parse and filter timestamp
-                    time_str = item.get("time", "")
+                    time_str = item.get("time") or ""
                     try:
                         timestamp = datetime.fromisoformat(
                             time_str.replace("Z", "+00:00")
                         )
-                    except ValueError:
+                    except (ValueError, AttributeError):
                         continue
 
                     if timestamp < self.cutoff:
                         continue
 
-                    # channel info
-                    subtitles    = item.get("subtitles", [])
-                    channel_name = subtitles[0].get("name", "Unknown") if subtitles else "Unknown"
-                    channel_url  = subtitles[0].get("url", "")          if subtitles else ""
+                    # 3. جلب بيانات القناة بأمان تامة لتفادي خطأ NoneType
+                    subtitles = item.get("subtitles") or []
+                    channel_name = "Unknown"
+                    channel_url  = ""
+
+                    if isinstance(subtitles, list) and len(subtitles) > 0:
+                        first_sub = subtitles[0] if isinstance(subtitles[0], dict) else {}
+                        channel_name = first_sub.get("name") or "Unknown"
+                        channel_url  = first_sub.get("url") or ""
 
                     # clean title — remove locale-specific prefixes
-                    raw_title = item.get("title", "").strip()
+                    raw_title = (item.get("title") or "").strip()
                     raw_title = raw_title.removeprefix("Watched ")
                     raw_title = raw_title.removeprefix("تمت مشاهدة ")
 
@@ -146,15 +159,16 @@ class YoutubeParser:
                         continue
 
                     # detect Shorts from URL or title hashtags
+                    title_lower = raw_title.lower()
                     is_short = (
                         "/shorts/" in title_url
-                        or "#shorts" in raw_title.lower()
-                        or "#short"  in raw_title.lower()
+                        or "#shorts" in title_lower
+                        or "#short"  in title_lower
                         or (raw_title.endswith(".") and "#" in raw_title)
                     )
 
                     # cross-reference with subscriptions
-                    is_subscribed = _normalize_url(channel_url) in subscribed_urls
+                    is_subscribed = _normalize_url(channel_url) in (subscribed_urls or set())
 
                     watched.append(
                         WatchItem(
