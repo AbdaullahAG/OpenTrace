@@ -37,10 +37,8 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
     ai_available = client.ping()
 
     if ai_available:
-        titles = [item["title"] for item in clean_items if item.get("title")]
         try:
-            distribution = classify_topics(client, titles)
-            clean_items = _attach_topics(clean_items, titles, distribution)
+            clean_items = _attach_topics(clean_items, client)
         except OllamaError:
             ai_available = False
 
@@ -74,18 +72,21 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
     }
 
 
-def _attach_topics(items: list[dict], titles: list[str], distribution: dict[str, int]) -> list[dict]:
-    # classify_topics returns aggregate counts, not per-item labels, which
-    # is all the concentration math needs — we fan the counts back out so
-    # concentration.py can stay a simple per-item reader.
-    expanded_topics: list[str] = []
-    for topic, count in distribution.items():
-        expanded_topics.extend([topic] * count)
+def _attach_topics(items: list[dict], client: OllamaClient) -> list[dict]:
+    """Classify and attach a "topic" to each item that has a title.
 
-    return [
-        {**item, "topic": expanded_topics[i] if i < len(expanded_topics) else "other"}
-        for i, item in enumerate(items)
-    ]
+    Tracks the original index of each titled item so labels line up
+    with the exact item they were classified from — items without a
+    title are left untouched (concentration.py already skips them).
+    """
+    titled_indices = [i for i, item in enumerate(items) if item.get("title")]
+    titles = [items[i]["title"] for i in titled_indices]
+    labels = classify_topics(client, titles)
+
+    updated = list(items)
+    for index, label in zip(titled_indices, labels):
+        updated[index] = {**updated[index], "topic": label}
+    return updated
 
 
 def _manipulation_weight(items: list[dict]) -> float:

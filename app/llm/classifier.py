@@ -9,41 +9,41 @@ trust it blindly (no eval(), no assuming well-formed JSON).
 from __future__ import annotations
 
 import json
-import re
+import sys
 
 from app.constants import CLASSIFICATION_BATCH_SIZE, TOPIC_CATEGORIES
 from app.llm.ollama_client import OllamaClient, OllamaError
 from app.llm.prompts import build_topic_classification_prompt
 
-_JSON_BLOCK = re.compile(r"\{.*\}", re.DOTALL)
 _FALLBACK_TOPIC = "other"
 
 
-def classify_topics(client: OllamaClient, titles: list[str]) -> dict[str, int]:
-    """Classify a list of titles into topic categories.
+def classify_topics(client: OllamaClient, titles: list[str]) -> list[str]:
+    """Classify titles into topic categories, one label per title, in
+    the same order as the input.
 
-    Returns a plain count per category, e.g. {"sports": 12, "news": 4}.
     Never raises — on any failure (Ollama down, bad output) the
-    unclassified titles simply fall into "other" so the caller can
-    keep going with a degraded-but-honest result.
+    affected titles simply get "other" so the caller can keep going
+    with a degraded-but-honest result.
     """
-    counts = {topic: 0 for topic in TOPIC_CATEGORIES}
-
+    labels: list[str] = []
     for start in range(0, len(titles), CLASSIFICATION_BATCH_SIZE):
         batch = titles[start:start + CLASSIFICATION_BATCH_SIZE]
-        labels = _classify_batch(client, batch)
-        for label in labels:
-            counts[label if label in counts else _FALLBACK_TOPIC] += 1
-
-    return counts
+        batch_labels = _classify_batch(client, batch)
+        labels.extend(
+            label if label in TOPIC_CATEGORIES else _FALLBACK_TOPIC
+            for label in batch_labels
+        )
+    return labels
 
 
 def _classify_batch(client: OllamaClient, titles: list[str]) -> list[str]:
     prompt = build_topic_classification_prompt(titles)
 
     try:
-        raw_response = client.generate(prompt)
-    except OllamaError:
+        raw_response = client.generate(prompt, timeout=90)
+    except OllamaError as exc:
+        print(f"⚠️ classifier: batch of {len(titles)} failed, falling back to 'other': {exc}", file=sys.stderr)
         return [_FALLBACK_TOPIC] * len(titles)
 
     parsed = _extract_json(raw_response)
@@ -56,13 +56,36 @@ def _classify_batch(client: OllamaClient, titles: list[str]) -> list[str]:
 
 
 def _extract_json(text: str) -> dict:
-    """Small models sometimes wrap JSON in explanatory text. Pull the
-    first {...} block out and parse just that.
+    """Find the first *parseable* balanced {...} object in the text.
+
+    A greedy regex (\\{.*\\}) grabs from the FIRST '{' to the LAST '}'
+    in the whole response — if the model echoes part of the prompt
+    (which itself contains an example JSON object), that spans across
+    both and produces invalid JSON. Scanning brace depth instead finds
+    each well-formed object in order and tries them one at a time,
+    since the model may echo a non-JSON `{...}` fragment before the
+    real answer.
     """
-    match = _JSON_BLOCK.search(text)
-    if not match:
-        return {}
-    try:
-        return json.loads(match.group())
-    except json.JSONDecodeError:
-        return {}
+    for candidate in _balanced_brace_blocks(text):
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+
+    print(f"⚠️ classifier: no parseable JSON object in model output: {text[:120]!r}", file=sys.stderr)
+    return {}
+
+
+def _balanced_brace_blocks(text: str):
+    """Yield every top-level {...} substring, in order of appearance."""
+    depth = 0
+    start = None
+    for i, char in enumerate(text):
+        if char == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif char == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start is not None:
+                yield text[start:i + 1]
