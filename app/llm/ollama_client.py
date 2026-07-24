@@ -13,7 +13,7 @@ from app.config import get_settings
 from app.scoring.security import is_local_host
 
 _TAGS_TIMEOUT = 3
-_GENERATE_TIMEOUT = 30
+_DEFAULT_GENERATE_TIMEOUT = 90  # CPU-only inference on longer prompts can take a while
 
 
 class OllamaError(Exception):
@@ -40,11 +40,13 @@ class OllamaClient:
         except requests.exceptions.RequestException:
             return False
 
-    def generate(self, prompt: str, *, temperature: float = 0.2) -> str:
+    def generate(self, prompt: str, *, temperature: float = 0.2, timeout: float = _DEFAULT_GENERATE_TIMEOUT) -> str:
         """Send a prompt, return the raw text response.
 
         Raises OllamaError on connection failure or timeout so callers
         can decide how to degrade gracefully instead of the app crashing.
+        `timeout` is overridable per-call — a batch of 10 complex titles
+        on CPU-only inference needs more room than a one-line prompt.
         """
         try:
             response = requests.post(
@@ -55,7 +57,7 @@ class OllamaClient:
                     "stream": False,
                     "options": {"temperature": temperature},
                 },
-                timeout=_GENERATE_TIMEOUT,
+                timeout=timeout,
             )
             response.raise_for_status()
         except requests.exceptions.ConnectionError as exc:
@@ -64,7 +66,7 @@ class OllamaClient:
             ) from exc
         except requests.exceptions.Timeout as exc:
             raise OllamaError(
-                f"Ollama request timed out after {_GENERATE_TIMEOUT}s."
+                f"Ollama request timed out after {timeout}s."
             ) from exc
         except requests.exceptions.HTTPError as exc:
             raise OllamaError(f"Ollama returned an error: {exc}") from exc

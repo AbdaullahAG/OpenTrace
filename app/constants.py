@@ -16,6 +16,7 @@ TOPIC_CATEGORIES: tuple[str, ...] = (
     "education",
     "music",
     "gaming",
+    "religion",
     "other",
 )
 
@@ -30,4 +31,4 @@ SCORE_WEIGHTS: dict[str, float] = {
 # Defensive limits — protect the LLM call and the app from oversized input.
 MAX_ITEMS_PER_REQUEST = 5000
 MAX_TITLE_LENGTH = 300
-CLASSIFICATION_BATCH_SIZE = 20
+CLASSIFICATION_BATCH_SIZE = 5  # keeps each request short enough for slower CPU-only inference
