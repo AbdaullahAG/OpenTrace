@@ -1,31 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OpenTrace</title>
-  <link rel="stylesheet" href="css/style.css" />
-</head>
-<body>
-  <main class="hero">
-    <div class="hero-card">
-      <p class="eyebrow">Local-first feed analysis</p>
-      <h1>OpenTrace</h1>
-      <p class="subtitle">
-        Understand what shapes your feed, spot manipulation patterns, and explore healthier alternatives.
-      </p>
-      <div class="actions">
-        <button id="startBtn">Start exploring</button>
-      </div>
-      <div class="upload-box">
-        <input id="fileInput" type="file" />
-      </div>
-      <pre id="resultOutput" class="result-output">No file uploaded yet.</pre>
-      <p id="status" class="status">The app is ready to launch locally.</p>
-    </div>
-  </main>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenTrace</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <div id="upload-section" class="screen active">
+        <h1>Welcome to OpenTrace</h1>
+        <p>Let's see what the algorithm is showing you.</p>
 
-  <script src="js/app.js"></script>
-  <script src="js/bridge.js"></script>
-</body>
+        <button id="select-file-btn" class="primary-btn">
+          Select Watch History File
+        </button>
+        <p class="help-text">
+          Select your YouTube or TikTok data file to begin. Your data never
+          leaves this computer.
+        </p>
+      </div>
+
+      <div id="loading-section" class="screen hidden">
+        <div class="spinner"></div>
+        <h2 id="loading-status">Reading your files...</h2>
+        <p>
+          This might take a few minutes depending on how many videos you've
+          watched.
+        </p>
+      </div>
+
+      <div id="results-section" class="screen hidden">
+        <h2>Your Algorithm Summary</h2>
+        <div id="llm-insight-box" class="insight-box"></div>
+
+        <button id="start-over-btn" class="secondary-btn">Start Over</button>
+      </div>
+    </main>
+
+    <script src="js/bridge.js"></script>
+    <script src="js/app.js"></script>
+  </body>
 </html>

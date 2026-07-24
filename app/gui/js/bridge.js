@@ -1,19 +1,26 @@
-document.addEventListener('pywebviewready', async () => {
-  const input = document.getElementById('fileInput');
-  const output = document.getElementById('resultOutput');
-
-  if (!input || !output) {
-    return;
-  }
-
-  input.addEventListener('change', async () => {
-    const file = input.files && input.files[0];
-    if (!file) {
-      return;
+const BackendAPI = {
+  async analyzeWatchHistory() {
+    if (window.pywebview && window.pywebview.api) {
+      try {
+        const result = await window.pywebview.api.trigger_analysis();
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          message: "Failed to communicate with Python backend.",
+        };
+      }
+    } else {
+      console.log("Running in browser mode. Simulating backend...");
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            success: true,
+            message:
+              "<h3>Analysis Complete</h3><p>Your algorithm looks pretty balanced. You have a slight filter bubble around tech tutorials, but your overall content diversity is healthy.</p>",
+          });
+        }, 3000);
+      });
     }
-
-    const file_path = file.path;
-    const response = await window.pywebview.api.handle_file_upload(file_path);
-    output.textContent = JSON.stringify(response, null, 2);
-  });
-});
+  },
+};
