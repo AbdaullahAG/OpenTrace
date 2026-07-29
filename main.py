@@ -1,12 +1,31 @@
 import webview
 import os
+import time
 
 class BackendAPI:
     def handle_file_upload(self, file_path):
+        """
+        Validates the existence of the provided file path.
+        Called by the frontend during the file selection sequence.
+        """
         print(f"File received in Python: {file_path}")
         if os.path.exists(file_path):
             return {"status": "success", "message": "File linked successfully"}
         return {"status": "error", "message": "File not found"}
+
+    def trigger_analysis(self):
+        """
+        Initiates the algorithmic analysis pipeline.
+        Currently implements a placeholder delay to test UI asynchronous state management.
+        """
+        print("Analysis pipeline triggered by frontend.")
+        
+        time.sleep(3)
+        
+        return {
+            "success": True,
+            "message": "<h3>Analysis Complete</h3><p>Local analysis bridge connected successfully.</p>"
+        }
 
 def start():
     print("Starting OpenTrace GUI...")

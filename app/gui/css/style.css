@@ -153,3 +153,134 @@ button {
   font-size: 1.05rem;
   color: var(--text-color);
 }
+
+body {
+  background: linear-gradient(135deg, #f4f7f6, #e0e8e5, #f4f7f6);
+  background-size: 200% 200%;
+  animation: breathingBackground 10s ease infinite;
+  cursor: none;
+}
+
+@keyframes breathingBackground {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary-color);
+  border-radius: 50%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition:
+    width 0.2s,
+    height 0.2s,
+    background-color 0.2s;
+}
+
+.cursor-outline {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--primary-color);
+  border-radius: 50%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition:
+    width 0.2s,
+    height 0.2s,
+    background-color 0.2s,
+    border-color 0.2s;
+  transition-property: top, left, width, height;
+  transition-duration: 0.1s, 0.1s, 0.2s, 0.2s;
+}
+
+.cursor-hover .cursor-dot {
+  width: 0;
+  height: 0;
+}
+
+.cursor-hover .cursor-outline {
+  width: 60px;
+  height: 60px;
+  background-color: rgba(0, 86, 179, 0.1);
+  border-color: var(--primary-hover);
+}
+
+.guide-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
+.guide-overlay.hidden {
+  opacity: 0;
+}
+
+.guide-tip-box {
+  position: absolute;
+  background-color: transparent;
+  color: var(--text-color);
+  padding: 8px 24px;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  font-weight: 900;
+  border: 4px solid var(--text-color);
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.1);
+  transform: rotate(-3deg);
+}
+
+.guide-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#guide-path {
+  animation: dashMove 1s linear infinite;
+}
+
+@keyframes dashMove {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.cursor-shadow {
+  width: 20px;
+  height: 20px;
+  background-color: var(--primary-color);
+  border-radius: 50%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9997;
+  opacity: 0;
+}

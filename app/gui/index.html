@@ -7,6 +7,37 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-outline" id="cursor-outline"></div>
+    <div id="cursor-shadow" class="cursor-shadow"></div>
+
+    <div id="guide-overlay" class="guide-overlay hidden">
+      <div id="guide-tip-box" class="guide-tip-box"></div>
+      <svg id="guide-svg" class="guide-svg">
+        <defs>
+          <marker
+            id="arrowhead"
+            markerWidth="10"
+            markerHeight="7"
+            refX="9"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--text-color)" />
+          </marker>
+        </defs>
+        <path
+          id="guide-path"
+          d=""
+          stroke="var(--text-color)"
+          stroke-width="4"
+          stroke-dasharray="12, 12"
+          fill="none"
+          marker-end="url(#arrowhead)"
+        />
+      </svg>
+    </div>
+
     <main class="container">
       <div id="upload-section" class="screen active">
         <h1>Welcome to OpenTrace</h1>
