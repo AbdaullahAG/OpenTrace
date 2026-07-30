@@ -21,33 +21,23 @@ function showScreen(screenToShow) {
   screenToShow.classList.add("active");
 }
 
-selectFileBtn.addEventListener("click", async () => {
+const dropZone = document.getElementById("drop-zone");
+
+// --- Core Analysis Function ---
+// Reused for both the Browse button and the Drag-and-Drop action
+async function processTakeoutPath(selectedPath) {
   showScreen(loadingSection);
-  loadingStatus.textContent = "Opening folder selector...";
+  loadingStatus.textContent =
+    "Extracting and analyzing data... This may take a moment.";
 
   try {
-    // 1. Ask Python to open the native folder picker
-    const selectedPath = await window.pywebview.api.select_takeout_path();
+    const response = await window.pywebview.api.run_analysis(selectedPath);
 
-    // If the user actually selected a folder (didn't click cancel)
-    if (selectedPath) {
-      loadingStatus.textContent =
-        "Extracting and analyzing data... This may take a moment.";
-
-      // 2. Pass the chosen path to Abdallah's analysis function
-      const response = await window.pywebview.api.run_analysis(selectedPath);
-
-      // 3. Handle the new response format {success, report} or {success: false, message}
-      if (response && response.success) {
-        // Notice it's now response.report based on Abdallah's message!
-        insightBox.innerHTML = response.report;
-        showScreen(resultsSection);
-      } else {
-        alert(response?.message || "Something went wrong during analysis.");
-        showScreen(uploadSection);
-      }
+    if (response && response.success) {
+      insightBox.innerHTML = response.report;
+      showScreen(resultsSection);
     } else {
-      // The user closed the folder picker without selecting anything
+      alert(response?.message || "Something went wrong during analysis.");
       showScreen(uploadSection);
     }
   } catch (error) {
@@ -55,7 +45,72 @@ selectFileBtn.addEventListener("click", async () => {
     alert("Failed to communicate with Python backend. Check the console!");
     showScreen(uploadSection);
   }
+}
+
+// --- 1. Button Click Handler ---
+selectFileBtn.addEventListener("click", async () => {
+  try {
+    const selectedPath = await window.pywebview.api.select_takeout_path();
+    if (selectedPath) {
+      await processTakeoutPath(selectedPath);
+    }
+  } catch (error) {
+    console.error("Error opening folder picker:", error);
+  }
 });
+
+// --- 2. Drag and Drop Logic ---
+// Prevent default browser behaviors (which normally try to open the file in a new tab)
+["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+  dropZone.addEventListener(eventName, preventDefaults, false);
+  document.body.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+// Add visual highlight when dragging over the box
+["dragenter", "dragover"].forEach((eventName) => {
+  dropZone.addEventListener(
+    eventName,
+    () => dropZone.classList.add("dragover"),
+    false,
+  );
+});
+
+// Remove highlight when dragged away or dropped
+["dragleave", "drop"].forEach((eventName) => {
+  dropZone.addEventListener(
+    eventName,
+    () => dropZone.classList.remove("dragover"),
+    false,
+  );
+});
+
+// Handle the actual file drop
+dropZone.addEventListener(
+  "drop",
+  (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+
+    if (files && files.length > 0) {
+      // PyWebView's Chromium engine securely exposes the absolute system path via the 'path' property
+      const droppedPath = files[0].path;
+
+      if (droppedPath) {
+        processTakeoutPath(droppedPath);
+      } else {
+        alert(
+          "Could not read the folder path automatically. Please use the Browse button instead.",
+        );
+      }
+    }
+  },
+  false,
+);
 
 startOverBtn.addEventListener("click", () => {
   showScreen(uploadSection);
