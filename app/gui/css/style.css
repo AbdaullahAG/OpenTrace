@@ -284,3 +284,59 @@ body {
   z-index: 9997;
   opacity: 0;
 }
+
+/* Instructions Box */
+.instructions-box {
+  background-color: #f8f9fa;
+  border-left: 5px solid #0056b3;
+  padding: 15px 20px;
+  margin: 20px auto;
+  max-width: 500px;
+  text-align: left;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.instructions-box h3 {
+  margin-top: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.instructions-box ol {
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.instructions-box li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #444;
+}
+
+/* Drag and Drop Zone */
+.drop-zone {
+  border: 2px dashed #0056b3;
+  border-radius: 12px;
+  padding: 40px 20px;
+  max-width: 500px;
+  margin: 20px auto;
+  text-align: center;
+  background-color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+
+/* This class gets added by JS when a file hovers over it */
+.drop-zone.dragover {
+  background-color: #e9f2ff;
+  border-color: #003d82;
+  transform: scale(1.02);
+}
+
+.or-text {
+  color: #888;
+  margin: 15px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}

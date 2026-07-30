@@ -40,21 +40,28 @@
 
     <main class="container">
       <div id="upload-section" class="screen active">
-        <h1>Welcome to OpenTrace</h1>
-        <p>Let's see what the algorithm is showing you.</p>
+        <div class="welcome-container">
+          <h2>Welcome to OpenTrace</h2>
+          <p>
+            Let's safely analyze your viewing habits. Your data never leaves
+            this computer.
+          </p>
 
-        <button id="select-file-btn" class="primary-btn">
-          📦 Select ZIP File
-        </button>
-        <button id="select-folder-btn" class="secondary-btn" style="margin-top:-8px">
-          📁 Or Select Extracted Folder
-        </button>
-        <p class="help-text">
-          Select your YouTube Takeout .zip file, or the folder if you already
-          extracted it. Your data never leaves this computer.
-        </p>
-      </div>
+    <!-- Grandma-Friendly Instructions -->
+    <div class="instructions-box">
+      <h3>How to get your data:</h3>
+      <ol>
+        <li>Go to <strong>takeout.google.com</strong> to download your YouTube history.</li>
+        <li>Click the button below to select the downloaded <strong>.zip file</strong>. (No need to unzip it!)</li>
+      </ol>
+    </div>
 
+    <!-- File Selection -->
+    <div id="drop-zone" class="drop-zone" style="border: none; background: transparent; cursor: default;">
+      <button id="select-file-btn" class="primary-btn">
+        Browse for .zip File
+      </button>
+    </div>
 
       <div id="loading-section" class="screen hidden">
         <div class="spinner"></div>

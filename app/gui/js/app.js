@@ -2,11 +2,24 @@ const uploadSection = document.getElementById("upload-section");
 const loadingSection = document.getElementById("loading-section");
 const resultsSection = document.getElementById("results-section");
 
-const selectFileBtn   = document.getElementById("select-file-btn");
-const selectFolderBtn = document.getElementById("select-folder-btn");
-const startOverBtn    = document.getElementById("start-over-btn");
-const loadingStatus   = document.getElementById("loading-status");
-const insightBox      = document.getElementById("llm-insight-box");
+const selectFileBtn = document.getElementById("select-file-btn");
+const startOverBtn = document.getElementById("start-over-btn");
+const loadingStatus = document.getElementById("loading-status");
+const insightBox = document.getElementById("llm-insight-box");
+
+function showScreen(screenToShow) {
+  uploadSection.classList.remove("active");
+  uploadSection.classList.add("hidden");
+
+  loadingSection.classList.remove("active");
+  loadingSection.classList.add("hidden");
+
+  resultsSection.classList.remove("active");
+  resultsSection.classList.add("hidden");
+
+  screenToShow.classList.remove("hidden");
+  screenToShow.classList.add("active");
+}
 
 /** Render the BubbleReport object into the results section. */
 function renderReport(report) {
@@ -46,20 +59,7 @@ function renderReport(report) {
   `;
 }
 
-function showScreen(screenToShow) {
-  uploadSection.classList.remove("active");
-  uploadSection.classList.add("hidden");
-
-  loadingSection.classList.remove("active");
-  loadingSection.classList.add("hidden");
-
-  resultsSection.classList.remove("active");
-  resultsSection.classList.add("hidden");
-
-  screenToShow.classList.remove("hidden");
-  screenToShow.classList.add("active");
-}
-
+// --- Button Click Handler ---
 selectFileBtn.addEventListener("click", async () => {
   // Step 1: open the native file picker (shows .zip files)
   loadingStatus.textContent = "Opening file picker...";
@@ -74,31 +74,7 @@ selectFileBtn.addEventListener("click", async () => {
   }
 
   // Step 2: run the full analysis pipeline
-  loadingStatus.textContent = "Analysing your watch history…";
-
-  const response = await BackendAPI.runAnalysis(path);
-
-  if (response.success) {
-    renderReport(response.report);
-    showScreen(resultsSection);
-  } else {
-    alert(response.message || "Something went wrong.");
-    showScreen(uploadSection);
-  }
-});
-
-selectFolderBtn.addEventListener("click", async () => {
-  loadingStatus.textContent = "Opening folder picker...";
-  showScreen(loadingSection);
-
-  const path = await BackendAPI.selectFolder();
-
-  if (!path) {
-    showScreen(uploadSection);
-    return;
-  }
-
-  loadingStatus.textContent = "Analysing your watch history…";
+  loadingStatus.textContent = "Extracting and analyzing data... This may take a moment.";
 
   const response = await BackendAPI.runAnalysis(path);
 
@@ -233,3 +209,16 @@ showScreen = function (screenToShow) {
 };
 
 updateGuide();
+
+window.startDeepAnalysis = async function () {
+  insightBox.innerHTML =
+    '<div class="spinner"></div><p style="text-align:center; margin-top:15px;">Running local LLM analysis. This will take a moment...</p>';
+
+  const response = await window.pywebview.api.triggerLLMAnalysis();
+
+  if (response.success) {
+    insightBox.innerHTML = response.message;
+  } else {
+    insightBox.innerHTML = `<p style="color:red;">Error: ${response.message}</p>`;
+  }
+};
