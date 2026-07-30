@@ -23,15 +23,36 @@ function showScreen(screenToShow) {
 
 selectFileBtn.addEventListener("click", async () => {
   showScreen(loadingSection);
-  loadingStatus.textContent = "Asking you to select a file...";
+  loadingStatus.textContent = "Opening folder selector...";
 
-  const response = await BackendAPI.analyzeWatchHistory();
+  try {
+    // 1. Ask Python to open the native folder picker
+    const selectedPath = await window.pywebview.api.select_takeout_path();
 
-  if (response.success) {
-    insightBox.innerHTML = response.message;
-    showScreen(resultsSection);
-  } else {
-    alert(response.message || "Something went wrong.");
+    // If the user actually selected a folder (didn't click cancel)
+    if (selectedPath) {
+      loadingStatus.textContent =
+        "Extracting and analyzing data... This may take a moment.";
+
+      // 2. Pass the chosen path to Abdallah's analysis function
+      const response = await window.pywebview.api.run_analysis(selectedPath);
+
+      // 3. Handle the new response format {success, report} or {success: false, message}
+      if (response && response.success) {
+        // Notice it's now response.report based on Abdallah's message!
+        insightBox.innerHTML = response.report;
+        showScreen(resultsSection);
+      } else {
+        alert(response?.message || "Something went wrong during analysis.");
+        showScreen(uploadSection);
+      }
+    } else {
+      // The user closed the folder picker without selecting anything
+      showScreen(uploadSection);
+    }
+  } catch (error) {
+    console.error("Bridge Error Details:", error);
+    alert("Failed to communicate with Python backend. Check the console!");
     showScreen(uploadSection);
   }
 });
@@ -158,3 +179,16 @@ showScreen = function (screenToShow) {
 };
 
 updateGuide();
+
+window.startDeepAnalysis = async function () {
+  insightBox.innerHTML =
+    '<div class="spinner"></div><p style="text-align:center; margin-top:15px;">Running local LLM analysis. This will take a moment...</p>';
+
+  const response = await window.pywebview.api.triggerLLMAnalysis();
+
+  if (response.success) {
+    insightBox.innerHTML = response.message;
+  } else {
+    insightBox.innerHTML = `<p style="color:red;">Error: ${response.message}</p>`;
+  }
+};
