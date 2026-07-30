@@ -22,14 +22,22 @@ class FeedItem(TypedDict, total=False):
     topic: str        # filled in by the scoring layer, not by ingestion
 
 
+class ReportMetadata(TypedDict):
+    total_items: int          # full dataset size, before any sampling
+    unique_channels: int
+    sampled_for_ai: bool      # True if a stratified sample was used for classification
+    sample_size: int          # items actually sent to the LLM (== total_items if not sampled)
+
+
 class BubbleReport(TypedDict):
     bubble_score: int              # 0-100, higher = stronger filter bubble
     diversity_score: float         # 0-1, higher = more diverse sources
     concentration_score: float     # 0-1, higher = more concentrated topics
     algorithmic_exposure_score: float  # 0-1, share of content from unsubscribed channels
-    topic_distribution: dict[str, int]
-    top_channels: list[dict]
+    topic_distribution: dict[str, int]  # counts from the (possibly sampled) classified set
+    top_channels: list[dict]       # always computed from the FULL dataset
     manipulation_flags: list[str]
-    timeline: list[dict]
+    timeline: list[dict]           # always built from the FULL dataset
     ai_available: bool             # False if Ollama was unreachable
-    metadata: dict
+    suggested_alternatives: list[dict]  # {name, url, description, reason}
+    metadata: ReportMetadata

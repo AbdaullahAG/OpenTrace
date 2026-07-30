@@ -2,10 +2,49 @@ const uploadSection = document.getElementById("upload-section");
 const loadingSection = document.getElementById("loading-section");
 const resultsSection = document.getElementById("results-section");
 
-const selectFileBtn = document.getElementById("select-file-btn");
-const startOverBtn = document.getElementById("start-over-btn");
-const loadingStatus = document.getElementById("loading-status");
-const insightBox = document.getElementById("llm-insight-box");
+const selectFileBtn   = document.getElementById("select-file-btn");
+const selectFolderBtn = document.getElementById("select-folder-btn");
+const startOverBtn    = document.getElementById("start-over-btn");
+const loadingStatus   = document.getElementById("loading-status");
+const insightBox      = document.getElementById("llm-insight-box");
+
+/** Render the BubbleReport object into the results section. */
+function renderReport(report) {
+  const score = report.bubble_score ?? 0;
+  const flags = report.manipulation_flags ?? [];
+  const alts  = report.suggested_alternatives ?? [];
+  const meta  = report.metadata ?? {};
+
+  const flagLabels = {
+    low_source_diversity:     "مصادرك محدودة جداً",
+    high_topic_concentration: "محتواك متركّز حول موضوع واحد",
+    high_algorithmic_exposure:"معظم ما تشاهده من قنوات لم تشترك بها",
+    single_channel_dominance: "قناة واحدة تهيمن على مشاهداتك",
+  };
+
+  const flagsHTML = flags.length
+    ? `<ul>${flags.map(f => `<li>${flagLabels[f] || f}</li>`).join("")}</ul>`
+    : `<p>لم يتم رصد مؤشرات خطر واضحة.</p>`;
+
+  const altsHTML = alts.length
+    ? alts.map(a =>
+        `<li><a href="${a.url}" target="_blank"><strong>${a.name}</strong></a> — ${a.description}
+         <br><small style="color:#888">${a.reason}</small></li>`
+      ).join("")
+    : "";
+
+  insightBox.innerHTML = `
+    <h3>درجة فقاعتك: <span style="color:${score > 60 ? '#c0392b' : score > 35 ? '#e67e22' : '#27ae60'}">${score} / 100</span></h3>
+    <hr style="margin:12px 0">
+    <h4>مؤشرات التأثير:</h4>
+    ${flagsHTML}
+    ${altsHTML ? `<h4 style="margin-top:16px">بدائل مقترحة:</h4><ul>${altsHTML}</ul>` : ""}
+    <p style="margin-top:16px;font-size:0.85rem;color:#999">
+      حُلِّل ${meta.total_items ?? "?"} فيديو
+      ${meta.sampled_for_ai ? `(عيّنة ${meta.sample_size} للذكاء الاصطناعي)` : ""}
+    </p>
+  `;
+}
 
 function showScreen(screenToShow) {
   uploadSection.classList.remove("active");
@@ -22,13 +61,49 @@ function showScreen(screenToShow) {
 }
 
 selectFileBtn.addEventListener("click", async () => {
+  // Step 1: open the native file picker (shows .zip files)
+  loadingStatus.textContent = "Opening file picker...";
   showScreen(loadingSection);
-  loadingStatus.textContent = "Asking you to select a file...";
 
-  const response = await BackendAPI.analyzeWatchHistory();
+  const path = await BackendAPI.selectFile();
+
+  if (!path) {
+    // User cancelled the dialog — go back silently
+    showScreen(uploadSection);
+    return;
+  }
+
+  // Step 2: run the full analysis pipeline
+  loadingStatus.textContent = "Analysing your watch history…";
+
+  const response = await BackendAPI.runAnalysis(path);
 
   if (response.success) {
-    insightBox.innerHTML = response.message;
+    renderReport(response.report);
+    showScreen(resultsSection);
+  } else {
+    alert(response.message || "Something went wrong.");
+    showScreen(uploadSection);
+  }
+});
+
+selectFolderBtn.addEventListener("click", async () => {
+  loadingStatus.textContent = "Opening folder picker...";
+  showScreen(loadingSection);
+
+  const path = await BackendAPI.selectFolder();
+
+  if (!path) {
+    showScreen(uploadSection);
+    return;
+  }
+
+  loadingStatus.textContent = "Analysing your watch history…";
+
+  const response = await BackendAPI.runAnalysis(path);
+
+  if (response.success) {
+    renderReport(response.report);
     showScreen(resultsSection);
   } else {
     alert(response.message || "Something went wrong.");

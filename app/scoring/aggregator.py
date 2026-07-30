@@ -25,6 +25,7 @@ import sys
 from app.constants import SCORE_WEIGHTS
 from app.llm.classifier import classify_topics
 from app.llm.ollama_client import OllamaClient, OllamaError
+from app.scoring.alternatives import suggest_alternatives
 from app.scoring.concentration import calculate_concentration, topic_distribution
 from app.scoring.diversity import calculate_diversity, top_channels
 from app.scoring.exposure import algorithmic_exposure_share
@@ -83,7 +84,7 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
         )
     )
 
-    return {
+    report = {
         "bubble_score": bubble_score,
         "diversity_score": diversity_score,
         "concentration_score": concentration_score,
@@ -100,6 +101,8 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
             "sample_size": len(sample_items) if was_sampled else len(clean_items),
         },
     }
+    report["suggested_alternatives"] = suggest_alternatives(report)
+    return report
 
 
 def _attach_topics(items: list[dict], client: OllamaClient) -> list[dict]:
@@ -159,6 +162,7 @@ def _empty_report() -> dict:
         "manipulation_flags": [],
         "timeline": [],
         "ai_available": False,
+        "suggested_alternatives": [],
         "metadata": {
             "total_items": 0,
             "unique_channels": 0,

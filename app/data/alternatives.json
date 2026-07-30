@@ -1,3 +1,100 @@
 {
-  "alternatives": []
+  "by_flag": {
+    "low_source_diversity": [
+      {
+        "name": "RSS-Bridge",
+        "url": "https://github.com/RSS-Bridge/rss-bridge",
+        "description": "يولّد RSS feed لأي موقع، حتى لو ما كان يدعمها أصلاً — بتقدر تتابع مصادر متنوعة بدون خوارزمية توصية"
+      },
+      {
+        "name": "Mastodon",
+        "url": "https://joinmastodon.org",
+        "description": "شبكة تواصل مفتوحة بتايم لاين زمني بحت — إنت تختار مين تتابع، مش خوارزمية"
+      }
+    ],
+    "high_topic_concentration": [
+      {
+        "name": "RSS-Bridge",
+        "url": "https://github.com/RSS-Bridge/rss-bridge",
+        "description": "يخليك تبني قائمة مصادرك بنفسك بدل ما تعتمد على اقتراحات منصة واحدة"
+      }
+    ],
+    "high_algorithmic_exposure": [
+      {
+        "name": "PeerTube",
+        "url": "https://joinpeertube.org",
+        "description": "منصة فيديو لامركزية — بدون خوارزمية توصية خفية تقرر شو تشوف"
+      },
+      {
+        "name": "Mastodon",
+        "url": "https://joinmastodon.org",
+        "description": "تايم لاين زمني، مش مبني على توقع إيش بيخليك تضل متصفح أطول"
+      }
+    ],
+    "single_channel_dominance": [
+      {
+        "name": "RSS-Bridge",
+        "url": "https://github.com/RSS-Bridge/rss-bridge",
+        "description": "نوّع مصادرك بدل الاعتماد على قناة أو حساب واحد يهيمن على وقتك"
+      }
+    ]
+  },
+  "by_topic": {
+    "religion": [
+      {
+        "name": "AntennaPod",
+        "url": "https://antennapod.org",
+        "description": "تطبيق بودكاست مفتوح المصدر — تحكّم كامل بمصادرك الدينية والتلاوات بدون خوارزمية"
+      }
+    ],
+    "music": [
+      {
+        "name": "Funkwhale",
+        "url": "https://funkwhale.audio",
+        "description": "منصة موسيقى لامركزية ومفتوحة المصدر، بديل عن يوتيوب ميوزيك وسبوتيفاي"
+      }
+    ],
+    "entertainment": [
+      {
+        "name": "PeerTube",
+        "url": "https://joinpeertube.org",
+        "description": "بديل مفتوح المصدر ولامركزي لمنصات الفيديو الكبرى"
+      }
+    ],
+    "technology": [
+      {
+        "name": "Invidious",
+        "url": "https://invidious.io",
+        "description": "واجهة بديلة ليوتيوب بدون تتبع أو خوارزمية توصية، تقدر تشوف نفس المحتوى بخصوصية أكتر"
+      }
+    ],
+    "education": [
+      {
+        "name": "Invidious",
+        "url": "https://invidious.io",
+        "description": "شوف نفس القنوات التعليمية اللي بتحبها، بدون تتبع أو إعلانات مخصصة"
+      }
+    ],
+    "news": [
+      {
+        "name": "RSS-Bridge",
+        "url": "https://github.com/RSS-Bridge/rss-bridge",
+        "description": "اجمع أخبارك من مصادر متعددة تختارها إنت، بدل صفحة رئيسية تقررها خوارزمية"
+      }
+    ],
+    "gaming": [
+      {
+        "name": "PeerTube",
+        "url": "https://joinpeertube.org",
+        "description": "قنوات ألعاب مستقلة كثيرة صارت تستضيف محتواها على PeerTube"
+      }
+    ]
+  },
+  "default": [
+    {
+      "name": "YunoHost",
+      "url": "https://yunohost.org",
+      "description": "شغّل خدماتك المفتوحة الخاصة بسهولة — بداية جيدة لتقليل اعتمادك على منصات كبرى"
+    }
+  ]
 }

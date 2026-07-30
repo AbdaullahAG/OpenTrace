@@ -19,10 +19,28 @@ class BackendAPI:
     """
 
     def select_takeout_path(self):
-        """Opens a native folder picker and returns the chosen path.
+        """Opens a native file picker for .zip files OR a folder picker.
 
-        Returns the folder path as a string, or None if the user
-        cancelled the dialog.
+        Tries a file dialog first (so .zip files are visible).  If the
+        user cancels, returns None.  The caller (run_analysis) accepts
+        both a .zip path and a folder path — the Dispatcher handles both.
+
+        Returns the chosen path as a string, or None on cancel.
+        """
+        result = webview.windows[0].create_file_dialog(
+            webview.OPEN_DIALOG,
+            allow_multiple=False,
+            file_types=("ZIP Archive (*.zip)", "JSON File (*.json)", "All Files (*.*)"),
+        )
+        if not result:
+            return None
+        return result[0]
+
+    def select_takeout_folder(self):
+        """Fallback: opens a native FOLDER picker.
+
+        Useful when the user already extracted the Takeout zip and wants
+        to point to the folder directly.
         """
         result = webview.windows[0].create_file_dialog(
             webview.FOLDER_DIALOG
