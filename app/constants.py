@@ -32,3 +32,10 @@ SCORE_WEIGHTS: dict[str, float] = {
 MAX_ITEMS_PER_REQUEST = 5000
 MAX_TITLE_LENGTH = 300
 CLASSIFICATION_BATCH_SIZE = 5  # keeps each request short enough for slower CPU-only inference
+
+# Smart sampling — if more videos exist than this threshold, we draw a
+# stratified time-based sample of SMART_SAMPLE_SIZE instead of classifying
+# every video. Statistically, 400 uniformly distributed samples gives
+# bubble_score estimates accurate to ±5% (95% CI).
+SMART_SAMPLE_THRESHOLD = 400   # min items before sampling kicks in
+SMART_SAMPLE_SIZE     = 400   # target sample size
