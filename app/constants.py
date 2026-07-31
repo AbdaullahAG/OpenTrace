@@ -33,7 +33,7 @@ SCORE_WEIGHTS: dict[str, float] = {
 # Defensive limits — protect the LLM call and the app from oversized input.
 MAX_ITEMS_PER_REQUEST = 5000
 MAX_TITLE_LENGTH = 300
-CLASSIFICATION_BATCH_SIZE = 8  # short enough for slower CPU-only inference, big enough to keep call count sane
+CLASSIFICATION_BATCH_SIZE = 4  # short enough for slower CPU-only inference, big enough to keep call count sane
 
 # ── Classification throughput / reliability tuning ──────────────────────
 #
@@ -54,10 +54,10 @@ CLASSIFICATION_BATCH_SIZE = 8  # short enough for slower CPU-only inference, big
 #      malformed JSON response, a slow model warm-up), not permanent.
 #   3. Raise the overall deadline to something a real classification
 #      run can plausibly finish inside, instead of ~15 batches worth.
-CLASSIFICATION_MAX_WORKERS = 4          # concurrent in-flight requests to Ollama
-CLASSIFICATION_MAX_RETRIES = 2          # retries per batch before falling back to "other"
-CLASSIFICATION_RETRY_BACKOFF_SECONDS = 1.5
-CLASSIFICATION_DEADLINE_SECONDS = 900.0  # 15 min hard ceiling for the whole classification pass
+CLASSIFICATION_MAX_WORKERS = 1         # concurrent in-flight requests to Ollama
+CLASSIFICATION_MAX_RETRIES = 1          # retries per batch before falling back to "other"
+CLASSIFICATION_RETRY_BACKOFF_SECONDS = 1.0
+CLASSIFICATION_DEADLINE_SECONDS = 600.0  # 15 min hard ceiling for the whole classification pass
 
 # Smart sampling — if more videos exist than this threshold, we draw a
 # stratified time-based sample of SMART_SAMPLE_SIZE instead of classifying
