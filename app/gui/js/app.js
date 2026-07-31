@@ -68,10 +68,12 @@ function renderReport(report) {
   };
 
   const topicsSorted = Object.entries(topics).sort((a, b) => b[1] - a[1]);
+  const classifiedTotal = topicsSorted.reduce((sum, [, count]) => sum + count, 0);
+  const wasSampled = meta.sampled_for_ai === true;
 
   // بناء قسم الهيمنة المباشر
   let dominantHTML = "";
-  if (topicsSorted.length > 0 && totalWatched > 0) {
+  if (topicsSorted.length > 0 && classifiedTotal > 0) {
     let dominantTopic = topicsSorted[0][0];
     let dominantCount = topicsSorted[0][1];
 
@@ -80,12 +82,18 @@ function renderReport(report) {
       dominantCount = topicsSorted[1][1];
     }
 
-    const percentage = Math.round((dominantCount / totalWatched) * 100);
+    // النسبة محسوبة من العدد المصنَّف فعلياً (classifiedTotal)، مش من
+    // إجمالي المشاهدات — لو صارت عيّنة، الاتنين مختلفين وحساب النسبة
+    // من الإجمالي كان بيطلع رقم مضلِّل
+    const percentage = Math.round((dominantCount / classifiedTotal) * 100);
     const topicName = topicLabels[dominantTopic] || dominantTopic;
+    const sampleNote = wasSampled
+      ? ` (من عيّنة ${classifiedTotal} فيديو من أصل ${totalWatched})`
+      : "";
 
     dominantHTML = `
       <div style="background: var(--report-alt-bg, #fdf2f2); color: #c0392b; padding: 15px; border-radius: 8px; border-right: 5px solid #c0392b; margin-bottom: 25px; font-size: 16px; text-align: right;">
-        <strong>هيمنة المحتوى:</strong> محتواك يتمركز حول (<strong>${topicName}</strong>) بنسبة ${percentage}% من إجمالي ${totalWatched} فيديو شاهدتها خلال ${analysisDays} يوما.
+        <strong>هيمنة المحتوى:</strong> محتواك يتمركز حول (<strong>${topicName}</strong>) بنسبة ${percentage}%${sampleNote} من إجمالي ${totalWatched} فيديو شاهدتها خلال ${analysisDays} يوما.
       </div>
     `;
   }
@@ -114,7 +122,10 @@ function renderReport(report) {
 
   let topicsHTML = "";
   if (topicsSorted.length > 0) {
-    topicsHTML = `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 10px; font-size: 18px;">التوزيع الكمي للتصنيفات:</h4>
+    const topicsSampleNote = wasSampled
+      ? ` <span style="font-size:13px;font-weight:normal;color:var(--report-text-muted,#7f8c8d);">(عيّنة ${classifiedTotal} من ${totalWatched})</span>`
+      : "";
+    topicsHTML = `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 10px; font-size: 18px;">التوزيع الكمي للتصنيفات:${topicsSampleNote}</h4>
     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px;">
       ${topicsSorted
         .map(
@@ -283,7 +294,7 @@ selectFileBtn.addEventListener("click", async () => {
 startAnalysisBtn.addEventListener("click", async () => {
   try {
     loadingStatus.textContent =
-      "جارٍ تشغيل تحليل الذكاء الاصطناعي... قد يستغرق هذا دقيقة.";
+      "جارٍ تشغيل تحليل الذكاء الاصطناعي... قد يستغرق هذا بعض الوقت .";
     showScreen(loadingSection);
 
     const response = await window.pywebview.api.analyze(300);
