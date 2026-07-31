@@ -24,7 +24,7 @@ import sys
 from datetime import datetime
 
 from app.constants import SCORE_WEIGHTS
-from app.llm.classifier import classify_topics
+from app.llm.classifier import ClassificationResult, classify_topics
 from app.llm.ollama_client import OllamaClient, OllamaError
 from app.scoring.alternatives import suggest_alternatives
 from app.scoring.concentration import calculate_concentration, topic_distribution
@@ -63,9 +63,10 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
             file=sys.stderr,
         )
 
+    classification_stats = None
     if ai_available:
         try:
-            sample_items = _attach_topics(sample_items, client)
+            sample_items, classification_stats = _attach_topics(sample_items, client)
         except OllamaError:
             ai_available = False
 
@@ -99,6 +100,18 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
     exposure_total = len(exposure_items)
     exposure_unsubscribed = sum(1 for i in exposure_items if not i["is_subscribed"])
 
+    metadata_extra = {}
+    if classification_stats is not None:
+        # Surfaced so the UI can tell the person "N items couldn't be
+        # classified in time" instead of silently mixing them into a
+        # genuine model verdict of "other".
+        metadata_extra = {
+            "classification_llm_calls_cached": classification_stats.cache_hits,
+            "classification_deadline_dropped": classification_stats.deadline_dropped,
+            "classification_failed": classification_stats.failed,
+            "classification_elapsed_seconds": classification_stats.elapsed_seconds,
+        }
+
     report = {
         "bubble_score": bubble_score,
         "diversity_score": diversity_score,
@@ -117,30 +130,43 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
             "analysis_period_days": analysis_period_days,
             "exposure_total": exposure_total,
             "exposure_unsubscribed": exposure_unsubscribed,
+            **metadata_extra,
         },
     }
     report["suggested_alternatives"] = suggest_alternatives(report)
     return report
 
 
-def _attach_topics(items: list[dict], client: OllamaClient) -> list[dict]:
+def _attach_topics(items: list[dict], client: OllamaClient) -> tuple[list[dict], ClassificationResult]:
     """Classify and attach a ``"topic"`` to each item that has a title.
 
     Passes the parallel ``channels`` list to ``classify_topics`` so the
     channel cache can skip repeated LLM calls for the same channel.
     Items without a title are left untouched (concentration.py already
     skips them).
+
+    Returns the updated items alongside the ``ClassificationResult`` so
+    the caller can surface honest stats (cache hits, retries exhausted,
+    items dropped by the deadline) instead of hiding them.
     """
     titled_indices = [i for i, item in enumerate(items) if item.get("title")]
     titles   = [items[i]["title"]   for i in titled_indices]
     channels = [items[i].get("channel", "") for i in titled_indices]
 
-    labels = classify_topics(client, titles, channels=channels)
+    result = classify_topics(client, titles, channels=channels)
+
+    if result.deadline_dropped or result.failed:
+        print(
+            f"ℹ️  aggregator: classification finished in {result.elapsed_seconds}s — "
+            f"{result.llm_classified} classified, {result.cache_hits} from cache, "
+            f"{result.failed} failed after retries, {result.deadline_dropped} dropped by deadline.",
+            file=sys.stderr,
+        )
 
     updated = list(items)
-    for index, label in zip(titled_indices, labels):
+    for index, label in zip(titled_indices, result.labels):
         updated[index] = {**updated[index], "topic": label}
-    return updated
+    return updated, result
 
 
 def _manipulation_weight(items: list[dict]) -> float:

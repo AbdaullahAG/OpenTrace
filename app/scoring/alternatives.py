@@ -49,9 +49,16 @@ def suggest_alternatives(report: dict, limit: int = 5) -> list[dict]:
 
 
 def _dominant_topic(topic_distribution: dict[str, int]) -> str | None:
-    if not topic_distribution:
-        return None
-    return max(topic_distribution, key=topic_distribution.get)
+    """Returns the most common *meaningful* topic — "other" is skipped
+    since it isn't an actionable category (mirrors app.js's headline logic,
+    so the "content dominance" message and the alternative suggestions
+    always agree on what the dominant topic actually is).
+    """
+    ranked = sorted(topic_distribution.items(), key=lambda pair: -pair[1])
+    for topic, count in ranked:
+        if topic != "other" and count > 0:
+            return topic
+    return None
 
 
 def _add_if_new(suggestions: list[dict], seen: set[str], alt: dict, reason: str) -> None:
