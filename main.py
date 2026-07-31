@@ -21,9 +21,8 @@ class BackendAPI:
     def select_takeout_path(self):
         """Opens a native file picker for .zip files OR a folder picker.
 
-        Tries a file dialog first (so .zip files are visible).  If the
-        user cancels, returns None.  The caller (run_analysis) accepts
-        both a .zip path and a folder path — the Dispatcher handles both.
+        Initiates a file dialog prioritizing .zip archives. Returns None if 
+        canceled. The dispatcher handles both .zip and folder paths.
 
         Returns the chosen path as a string, or None on cancel.
         """
@@ -37,10 +36,9 @@ class BackendAPI:
         return result[0]
 
     def select_takeout_folder(self):
-        """Fallback: opens a native FOLDER picker.
+        """Fallback: opens a native directory picker.
 
-        Useful when the user already extracted the Takeout zip and wants
-        to point to the folder directly.
+        Provides support for directories extracted from the Takeout zip file.
         """
         result = webview.windows[0].create_file_dialog(
             webview.FOLDER_DIALOG
@@ -50,9 +48,10 @@ class BackendAPI:
         return result[0]
 
     def run_analysis(self, path: str):
-        """Runs the full pipeline on a Takeout folder or ZIP and
-        returns the BubbleReport dict (see app/schemas.py) as JSON-safe
-        data — pywebview serializes the return value automatically.
+        """Executes the analysis pipeline on a Takeout folder or ZIP.
+        
+        Returns the BubbleReport dict (see app/schemas.py) serialized 
+        as JSON-safe data.
         """
         try:
             dataset = Dispatcher().run(path)

@@ -25,87 +25,140 @@ function showScreen(screenToShow) {
 function renderReport(report) {
   const score = report.bubble_score ?? 0;
   const flags = report.manipulation_flags ?? [];
-  const alts  = report.suggested_alternatives ?? [];
-  const meta  = report.metadata ?? {};
+  const alts = report.suggested_alternatives ?? [];
+  const meta = report.metadata ?? {};
+
+  const scoreColor =
+    score > 60 ? "#c0392b" : score > 35 ? "#e67e22" : "#27ae60";
+  const scoreBg = score > 60 ? "#fdf2f2" : score > 35 ? "#fff9f2" : "#f0fdf4";
 
   const flagLabels = {
-    low_source_diversity:     "مصادرك محدودة جداً",
+    low_source_diversity: "مصادرك محدودة جداً",
     high_topic_concentration: "محتواك متركّز حول موضوع واحد",
-    high_algorithmic_exposure:"معظم ما تشاهده من قنوات لم تشترك بها",
+    high_algorithmic_exposure: "معظم ما تشاهده من قنوات لم تشترك بها",
     single_channel_dominance: "قناة واحدة تهيمن على مشاهداتك",
   };
 
   const flagsHTML = flags.length
-    ? `<ul>${flags.map(f => `<li>${flagLabels[f] || f}</li>`).join("")}</ul>`
-    : `<p>لم يتم رصد مؤشرات خطر واضحة.</p>`;
+    ? `<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+        ${flags
+          .map(
+            (f) => `
+          <div style="background: var(--report-alt-bg, #f8f9fa); border-right: 4px solid #c0392b; padding: 12px 15px; border-radius: 8px; font-weight: 500; color: var(--report-text-main, #333);">
+            🚨 ${flagLabels[f] || f}
+          </div>`,
+          )
+          .join("")}
+       </div>`
+    : `<div style="background: var(--report-alt-bg, #f0fdf4); padding: 12px; border-radius: 8px; color: #27ae60; font-weight: 500;">
+         ✨ لم يتم رصد مؤشرات خطر واضحة. فقاعتك صحية!
+       </div>`;
 
   const altsHTML = alts.length
-    ? alts.map(a =>
-        `<li><a href="${a.url}" target="_blank"><strong>${a.name}</strong></a> — ${a.description}
-         <br><small style="color:#888">${a.reason}</small></li>`
-      ).join("")
+    ? `<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+        ${alts
+          .map(
+            (a) => `
+          <div style="background: var(--report-alt-bg, #f4f7f9); border-right: 4px solid #0056b3; padding: 15px; border-radius: 8px;">
+            <a href="${a.url}" target="_blank" style="text-decoration: none; color: var(--report-link, #0056b3); font-weight: bold; font-size: 16px;">
+              🔗 ${a.name}
+            </a>
+            <p style="margin: 8px 0 0 0; color: var(--report-text-main, #444); line-height: 1.5;">${a.description}</p>
+            <small style="color: var(--report-text-muted, #666); display: block; margin-top: 8px; background: var(--report-small-bg, #e9ecef); padding: 6px; border-radius: 4px;">
+              💡 <strong>لماذا؟</strong> ${a.reason}
+            </small>
+          </div>`,
+          )
+          .join("")}
+       </div>`
     : "";
 
   insightBox.innerHTML = `
-    <h3>درجة فقاعتك: <span style="color:${score > 60 ? '#c0392b' : score > 35 ? '#e67e22' : '#27ae60'}">${score} / 100</span></h3>
-    <hr style="margin:12px 0">
-    <h4>مؤشرات التأثير:</h4>
-    ${flagsHTML}
-    ${altsHTML ? `<h4 style="margin-top:16px">بدائل مقترحة:</h4><ul>${altsHTML}</ul>` : ""}
-    <p style="margin-top:16px;font-size:0.85rem;color:#999">
-      حُلِّل ${meta.total_items ?? "?"} فيديو
-      ${meta.sampled_for_ai ? `(عيّنة ${meta.sample_size} للذكاء الاصطناعي)` : ""}
-    </p>
+    <div dir="rtl" style="text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      
+      <!-- New Bubble Score Container -->
+      <h3 style="margin: 0 0 20px 0; color: var(--report-text-main, #333); font-size: 20px; text-align: center;">درجة فقاعتك الخوارزمية</h3>
+      <div style="display: flex; justify-content: center; margin-bottom: 35px;">
+        <div style="background: var(--report-card-bg, rgba(255, 255, 255, 0.15)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 2px solid ${scoreColor}; border-radius: 50%; width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; flex-direction: column; box-shadow: inset 0 4px 20px rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.05);">
+          <div style="direction: ltr; font-size: 52px; font-weight: 900; color: ${scoreColor}; line-height: 1;">
+            ${score}
+          </div>
+          <div style="font-size: 18px; color: var(--report-text-muted, #777); font-weight: 600; margin-top: 8px;">/ 100</div>
+        </div>
+      </div>
+
+      <h4 style="color: var(--report-text-main, #222); margin-bottom: 5px; font-size: 18px;">مؤشرات التأثير:</h4>
+      ${flagsHTML}
+      ${altsHTML ? `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 5px; font-size: 18px;">بدائل مقترحة:</h4>${altsHTML}` : ""}
+      
+      <div style="margin-top: 35px; padding-top: 15px; border-top: 2px dashed rgba(128,128,128,0.3); text-align: center; font-size: 13px; color: var(--report-text-muted, #888);">
+        📊 حُلِّل <strong>${meta.total_items ?? "?"}</strong> فيديو
+        ${meta.sampled_for_ai ? `<br>(تم استخدام عيّنة من ${meta.sample_size} فيديو للذكاء الاصطناعي)` : ""}
+      </div>
+    </div>
   `;
 }
 
-// --- Button Click Handler ---
+// --- Event Listeners ---
 selectFileBtn.addEventListener("click", async () => {
-  // Step 1: open the native file picker (shows .zip files)
-  loadingStatus.textContent = "Opening file picker...";
-  showScreen(loadingSection);
+  try {
+    if (
+      typeof window.pywebview === "undefined" ||
+      typeof window.pywebview.api === "undefined"
+    ) {
+      throw new Error("PyWebView API is not loaded.");
+    }
 
-  const path = await BackendAPI.selectFile();
+    loadingStatus.textContent = "Opening file picker...";
+    showScreen(loadingSection);
 
-  if (!path) {
-    // User cancelled the dialog — go back silently
-    showScreen(uploadSection);
-    return;
-  }
+    const path = await window.pywebview.api.select_takeout_path();
 
-  // Step 2: run the full analysis pipeline
-  loadingStatus.textContent = "Extracting and analyzing data... This may take a moment.";
+    if (!path) {
+      showScreen(uploadSection);
+      return;
+    }
 
-  const response = await BackendAPI.runAnalysis(path);
+    loadingStatus.textContent =
+      "Extracting and analyzing data... This may take a moment.";
 
-  if (response.success) {
-    renderReport(response.report);
-    showScreen(resultsSection);
-  } else {
-    alert(response.message || "Something went wrong.");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const response = await window.pywebview.api.run_analysis(path);
+
+    if (response && response.success) {
+      renderReport(response.report);
+      currentStep = 1;
+      showScreen(resultsSection);
+    } else {
+      alert(response?.message || "Something went wrong.");
+      showScreen(uploadSection);
+    }
+  } catch (error) {
+    console.error("Bridge Error Details:", error);
+    alert("Failed to communicate with Python backend. Check the console!");
     showScreen(uploadSection);
   }
 });
 
 startOverBtn.addEventListener("click", () => {
+  currentStep = 0;
   showScreen(uploadSection);
 });
 
-const cursorDot = document.getElementById("cursor-dot");
-const cursorOutline = document.getElementById("cursor-outline");
-const cursorShadow = document.getElementById("cursor-shadow");
-const guideOverlay = document.getElementById("guide-overlay");
-const guideTipBox = document.getElementById("guide-tip-box");
-const guidePath = document.getElementById("guide-path");
-
+// --- Tutorial Guide Implementation ---
 let currentStep = 0;
 const steps = [
   { target: "select-file-btn", message: "Tip: click here" },
-  { target: "start-over-btn", message: "Tip: click here" },
+  {
+    target: "start-over-btn",
+    message: "Want to analyze another file? Click here!",
+  },
 ];
 
-let mouseX = window.innerWidth / 2;
-let mouseY = window.innerHeight / 2;
+const guideOverlay = document.getElementById("guide-overlay");
+const guideTipBox = document.getElementById("guide-tip-box");
+const guidePath = document.getElementById("guide-path");
 let shadowInterval;
 
 function updateGuide() {
@@ -113,30 +166,43 @@ function updateGuide() {
 
   if (currentStep >= steps.length) {
     guideOverlay.classList.add("hidden");
-    cursorShadow.style.opacity = "0";
+    if (document.getElementById("tutorial-shadow"))
+      document.getElementById("tutorial-shadow").style.opacity = "0";
     return;
   }
 
   const targetElement = document.getElementById(steps[currentStep].target);
-  if (!targetElement || targetElement.closest(".screen.hidden")) {
+
+  // Validate visibility to prevent rendering issues when the window is minimized
+  if (
+    !targetElement ||
+    targetElement.closest(".screen.hidden") ||
+    targetElement.offsetHeight === 0
+  ) {
     guideOverlay.classList.add("hidden");
-    cursorShadow.style.opacity = "0";
+    if (document.getElementById("tutorial-shadow"))
+      document.getElementById("tutorial-shadow").style.opacity = "0";
     return;
   }
 
   guideOverlay.classList.remove("hidden");
   guideTipBox.textContent = steps[currentStep].message;
 
+  // Calculate coordinates relative to the fixed viewport
   const rect = targetElement.getBoundingClientRect();
 
-  const tipX = Math.max(20, rect.left - 380);
+  // Adjust lateral offset conditionally based on the active step constraints
+  const leftOffset = currentStep === 1 ? 580 : 380;
+  const tipX = Math.max(20, rect.left - leftOffset);
   const tipY = Math.max(20, rect.top - 100);
 
   guideTipBox.style.left = `${tipX}px`;
   guideTipBox.style.top = `${tipY}px`;
 
-  const startX = tipX + 90;
+  const arrowStartOffset = currentStep === 1 ? 220 : 90;
+  const startX = tipX + arrowStartOffset;
   const startY = tipY + 65;
+
   const endX = rect.left - 15;
   const endY = rect.top + rect.height / 2;
   const cpX = tipX - 30;
@@ -147,60 +213,56 @@ function updateGuide() {
     `M ${startX} ${startY} Q ${cpX} ${cpY} ${endX} ${endY}`,
   );
 
+  // Initialize an isolated shadow element specific to the active tutorial node
+  let tutShadow = document.getElementById("tutorial-shadow");
+  if (!tutShadow) {
+    tutShadow = document.createElement("div");
+    tutShadow.id = "tutorial-shadow";
+    tutShadow.style.cssText =
+      "position:fixed; top:0; left:0; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle, rgba(91, 110, 245, 0.4), transparent 70%); filter:blur(4px); pointer-events:none; z-index:9996; opacity:0;";
+    document.body.appendChild(tutShadow);
+  }
+
+  // Bind animation sequence
   shadowInterval = setInterval(() => {
     const targetX = rect.left + rect.width / 2;
     const targetY = rect.top + rect.height / 2;
 
-    cursorShadow.animate(
+    const dot = document.getElementById("cursor-dot");
+    let startMouseX = targetX;
+    let startMouseY = targetY;
+
+    if (dot && dot.style.left) {
+      startMouseX = parseFloat(dot.style.left);
+      startMouseY = parseFloat(dot.style.top);
+    }
+
+    tutShadow.animate(
       [
         {
-          transform: `translate(${mouseX - 10}px, ${mouseY - 10}px) scale(1)`,
+          transform: `translate(${startMouseX - 60}px, ${startMouseY - 60}px) scale(0.5)`,
           opacity: 0,
         },
         {
-          transform: `translate(${mouseX - 10}px, ${mouseY - 10}px) scale(1)`,
+          transform: `translate(${startMouseX - 60}px, ${startMouseY - 60}px) scale(0.5)`,
           opacity: 0.6,
           offset: 0.1,
         },
         {
-          transform: `translate(${targetX - 10}px, ${targetY - 10}px) scale(2)`,
+          transform: `translate(${targetX - 60}px, ${targetY - 60}px) scale(1.5)`,
           opacity: 0,
           offset: 1,
         },
       ],
-      {
-        duration: 1500,
-        easing: "cubic-bezier(0.25, 1, 0.5, 1)",
-      },
+      { duration: 1500, easing: "cubic-bezier(0.25, 1, 0.5, 1)" },
     );
   }, 2000);
 }
 
-window.addEventListener("mousemove", function (e) {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
+window.addEventListener("scroll", updateGuide);
+window.addEventListener("resize", updateGuide);
 
-  cursorDot.style.left = `${mouseX}px`;
-  cursorDot.style.top = `${mouseY}px`;
-
-  cursorOutline.animate(
-    {
-      left: `${mouseX}px`,
-      top: `${mouseY}px`,
-    },
-    { duration: 500, fill: "forwards" },
-  );
-});
-
-document.querySelectorAll("button").forEach((button) => {
-  button.addEventListener("mouseenter", () => {
-    document.body.classList.add("cursor-hover");
-  });
-  button.addEventListener("mouseleave", () => {
-    document.body.classList.remove("cursor-hover");
-  });
-});
-
+// Ensure recalculation of guide coordinates upon DOM state changes
 let originalShowScreen =
   typeof showScreen !== "undefined" ? showScreen : function () {};
 showScreen = function (screenToShow) {
@@ -210,15 +272,15 @@ showScreen = function (screenToShow) {
 
 updateGuide();
 
-window.startDeepAnalysis = async function () {
-  insightBox.innerHTML =
-    '<div class="spinner"></div><p style="text-align:center; margin-top:15px;">Running local LLM analysis. This will take a moment...</p>';
+// --- Theme Management ---
+const themeToggle = document.getElementById("theme-toggle");
 
-  const response = await window.pywebview.api.triggerLLMAnalysis();
+themeToggle.addEventListener("click", () => {
+  document.body.classList.toggle("dark-theme");
 
-  if (response.success) {
-    insightBox.innerHTML = response.message;
+  if (document.body.classList.contains("dark-theme")) {
+    themeToggle.textContent = "☀️ Light Mode";
   } else {
-    insightBox.innerHTML = `<p style="color:red;">Error: ${response.message}</p>`;
+    themeToggle.textContent = "🌙 Dark Mode";
   }
-};
+});

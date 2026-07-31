@@ -12,11 +12,11 @@ const BackendAPI = {
     if (window.pywebview && window.pywebview.api) {
       return window.pywebview.api.select_takeout_path();
     }
-    // Browser mock — return a fake path so the rest of the flow can run
+    // Browser mock for local environment testing
     return "/mock/takeout-export.zip";
   },
 
-  /** Opens the native FOLDER-picker and returns the chosen path (or null). */
+  /** Opens the native folder-picker and returns the chosen path (or null). */
   async selectFolder() {
     if (window.pywebview && window.pywebview.api) {
       return window.pywebview.api.select_takeout_folder();
@@ -39,7 +39,7 @@ const BackendAPI = {
         };
       }
     }
-    // Browser mock
+    // Browser mock for local environment testing
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
@@ -49,7 +49,12 @@ const BackendAPI = {
             diversity_score: 0.38,
             concentration_score: 0.71,
             algorithmic_exposure_score: 0.58,
-            topic_distribution: { technology: 45, education: 30, entertainment: 15, other: 10 },
+            topic_distribution: {
+              technology: 45,
+              education: 30,
+              entertainment: 15,
+              other: 10,
+            },
             top_channels: [
               { channel: "Tech Channel", count: 40, share: 0.27 },
               { channel: "Education Hub", count: 25, share: 0.17 },
@@ -61,7 +66,8 @@ const BackendAPI = {
               {
                 name: "Invidious",
                 url: "https://invidious.io",
-                description: "Private YouTube front-end without recommendations.",
+                description:
+                  "Private YouTube front-end without recommendations.",
                 reason: "Based on your interest in technology",
               },
             ],
