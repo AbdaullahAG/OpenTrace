@@ -1,24 +1,8 @@
 """Orchestrates topic classification: batches titles, calls the LLM,
 and safely parses whatever comes back.
 
-Small local models don't always return clean JSON — this is the one
-place that has to assume the model's output is unreliable and never
-trust it blindly (no eval(), no assuming well-formed JSON).
-
-Optimisations (v2)
-------------------
-Channel-level result cache
-    The same channel often appears dozens of times in a watch history
-    (e.g. "تلاوات د. ماهر المعيقلي" × 13).  Sending the same title
-    pattern to Mistral repeatedly wastes time.  Instead, classify each
-    *channel* only once and reuse the label for every subsequent video
-    from that channel — without ever sending data to the network.
-
-    Cache key  : ``channel`` field of the scoring dict (exact string).
-    Cache value: topic label string.
-
-    Videos whose channel is empty / unknown still go through the normal
-    LLM path so no title is silently misclassified.
+Small local models don't always return clean JSON — this module safely
+extracts classifications with retries, concurrent processing, and flexible timeout.
 """
 
 from __future__ import annotations
@@ -27,14 +11,20 @@ import json
 import sys
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from app.constants import CLASSIFICATION_BATCH_SIZE, TOPIC_CATEGORIES
+from app.constants import (
+    CLASSIFICATION_BATCH_SIZE,
+    CLASSIFICATION_DEADLINE_SECONDS,
+    CLASSIFICATION_MAX_RETRIES,
+    CLASSIFICATION_MAX_WORKERS,
+    CLASSIFICATION_RETRY_BACKOFF_SECONDS,
+    TOPIC_CATEGORIES,
+)
 from app.llm.ollama_client import OllamaClient, OllamaError
 from app.llm.prompts import build_topic_classification_prompt
 
 _FALLBACK_TOPIC = "other"
-# Minimum number of times a channel must appear for us to cache its
-# label — avoids caching one-off channels that won't recur anyway.
 _CACHE_MIN_OCCURRENCES = 2
 
 
@@ -44,138 +34,121 @@ def classify_topics(
     *,
     channels: list[str] | None = None,
 ) -> list[str]:
-    """Classify titles into topic categories, one label per title, in
-    the same order as the input.
-
-    Parameters
-    ----------
-    client:
-        Live OllamaClient instance.
-    titles:
-        List of video titles to classify.
-    channels:
-        Optional parallel list of channel names (same length as titles).
-        When provided, a channel cache is built: if a channel has
-        appeared ``_CACHE_MIN_OCCURRENCES`` or more times its first
-        classified label is reused for every later occurrence, saving
-        one LLM call per duplicate.
-
-    Never raises — on any failure (Ollama down, bad output) the
-    affected titles simply get "other" so the caller can keep going
-    with a degraded-but-honest result.
-    """
+    """Classify titles into topic categories with caching and thread-pooling."""
     if channels and len(channels) != len(titles):
-        # Safety: mismatched lists → ignore channels to avoid index errors
         channels = None
 
     channel_cache: dict[str, str] = {}
     labels: list[str | None] = [None] * len(titles)
 
-    # ── Pass 1: serve already-cached channels without hitting the LLM ──
+    # ── Pass 1: Serve already-cached channels without hitting LLM ──
     if channels:
         channel_counts = Counter(
             ch for ch in channels if ch and ch != "Unknown"
         )
-        # For each high-frequency channel, only the FIRST occurrence goes to
-        # the LLM (pending_indices); all subsequent occurrences stay as None
-        # and are back-filled in Pass 4 once the cache is populated.
         pending_indices: list[int] = []
-        seen_channels: set[str] = set()  # tracks channels already queued for LLM
+        seen_channels: set[str] = set()
         for i, (title, ch) in enumerate(zip(titles, channels)):
             if ch and ch != "Unknown" and channel_counts[ch] >= _CACHE_MIN_OCCURRENCES:
                 if ch in channel_cache:
-                    labels[i] = channel_cache[ch]   # cache hit — no LLM needed
+                    labels[i] = channel_cache[ch]
                 elif ch in seen_channels:
-                    pass                             # 2nd+ occurrence — wait for Pass 4
+                    pass
                 else:
-                    pending_indices.append(i)        # first occurrence — classify once
+                    pending_indices.append(i)
                     seen_channels.add(ch)
             else:
-                pending_indices.append(i)  # unique / unknown channel — always classify
+                pending_indices.append(i)
     else:
         pending_indices = list(range(len(titles)))
 
-    # ── Pass 2: classify only the pending titles via the LLM ──
+    # ── Pass 2: Classify pending titles in parallel batches ──
     pending_titles = [titles[i] for i in pending_indices]
-    pending_labels: list[str] = []
+    batches = [
+        (i, pending_titles[i : i + CLASSIFICATION_BATCH_SIZE])
+        for i in range(0, len(pending_titles), CLASSIFICATION_BATCH_SIZE)
+    ]
 
-    deadline = time.time() + 240.0
+    deadline = time.time() + CLASSIFICATION_DEADLINE_SECONDS
+    results_map: dict[int, list[str]] = {}
 
-    for start in range(0, len(pending_titles), CLASSIFICATION_BATCH_SIZE):
+    def _process_batch(batch_idx: int, batch_titles: list[str]) -> tuple[int, list[str]]:
         if time.time() > deadline:
-            print("⚠️ classifier: 4-minute time limit exceeded, stopping early to prevent overheating.", file=sys.stderr)
-            break
-        batch = pending_titles[start : start + CLASSIFICATION_BATCH_SIZE]
-        batch_labels = _classify_batch(client, batch)
-        pending_labels.extend(
-            label if label in TOPIC_CATEGORIES else _FALLBACK_TOPIC
-            for label in batch_labels
-        )
+            return batch_idx, [_FALLBACK_TOPIC] * len(batch_titles)
+        return batch_idx, _classify_batch_with_retry(client, batch_titles)
 
-    if len(pending_labels) < len(pending_titles):
-        pending_labels.extend([_FALLBACK_TOPIC] * (len(pending_titles) - len(pending_labels)))
+    with ThreadPoolExecutor(max_workers=CLASSIFICATION_MAX_WORKERS) as executor:
+        futures = [
+            executor.submit(_process_batch, idx, batch) for idx, batch in batches
+        ]
+        for future in as_completed(futures):
+            try:
+                batch_idx, batch_labels = future.result()
+                results_map[batch_idx] = batch_labels
+            except Exception as exc:
+                print(f"⚠️ classifier: unexpected worker error: {exc}", file=sys.stderr)
 
-    # ── Pass 3: write LLM labels back + populate channel cache ──
+    # Reconstruct labels in original order
+    pending_labels: list[str] = []
+    for i in range(0, len(pending_titles), CLASSIFICATION_BATCH_SIZE):
+        batch_res = results_map.get(i, [_FALLBACK_TOPIC] * min(CLASSIFICATION_BATCH_SIZE, len(pending_titles) - i))
+        pending_labels.extend(batch_res)
+
+    # ── Pass 3: Write LLM labels back + populate channel cache ──
     for i, label in zip(pending_indices, pending_labels):
         labels[i] = label
         if channels:
             ch = channels[i]
             if ch and ch != "Unknown" and ch not in channel_cache:
-                channel_counts_val = channel_counts.get(ch, 0)  # type: ignore[union-attr]
-                if channel_counts_val >= _CACHE_MIN_OCCURRENCES:
-                    channel_cache[ch] = label
+                if channel_counts.get(ch, 0) >= _CACHE_MIN_OCCURRENCES: # type: ignore[union-attr]
+                    # Never cache 'other' for a channel if we can avoid it
+                    if label != _FALLBACK_TOPIC:
+                        channel_cache[ch] = label
 
-    # ── Pass 4: back-fill cached labels for any remaining None slots ──
-    # (slots that were pending because the channel hadn't been seen yet)
+    # ── Pass 4: Back-fill cached labels for remaining slots ──
     if channels:
         for i, (label, ch) in enumerate(zip(labels, channels)):
             if label is None and ch in channel_cache:
                 labels[i] = channel_cache[ch]
 
-    # Final safety: replace any remaining None with fallback
     final = [l if l is not None else _FALLBACK_TOPIC for l in labels]
-
-    # Log cache efficiency
-    cache_hits = sum(1 for l in labels if l is not None and l != _FALLBACK_TOPIC) - len(pending_indices) + len(pending_titles)
-    if channel_cache:
-        print(
-            f"ℹ️  classifier: channel cache built ({len(channel_cache)} channels cached, "
-            f"~{len(titles) - len(pending_titles)} LLM calls saved)",
-            file=sys.stderr,
-        )
-
     return final
 
 
-def _classify_batch(client: OllamaClient, titles: list[str]) -> list[str]:
+def _classify_batch_with_retry(client: OllamaClient, titles: list[str]) -> list[str]:
+    """Execute classification with exponential backoff on retries."""
     prompt = build_topic_classification_prompt(titles)
 
-    try:
-        raw_response = client.generate(prompt, timeout=90)
-    except OllamaError as exc:
-        print(f"⚠️ classifier: batch of {len(titles)} failed, falling back to 'other': {exc}", file=sys.stderr)
-        return [_FALLBACK_TOPIC] * len(titles)
+    for attempt in range(CLASSIFICATION_MAX_RETRIES + 1):
+        try:
+            raw_response = client.generate(prompt, timeout=90)
+            parsed = _extract_json(raw_response)
+            labels = parsed.get("classifications", [])
 
-    parsed = _extract_json(raw_response)
-    labels = parsed.get("classifications", [])
+            # Filter valid labels
+            valid_labels = [
+                lbl if lbl in TOPIC_CATEGORIES else _FALLBACK_TOPIC
+                for lbl in labels
+            ]
 
-    if len(labels) < len(titles):
-        labels += [_FALLBACK_TOPIC] * (len(titles) - len(labels))
+            if len(valid_labels) >= len(titles):
+                return valid_labels[: len(titles)]
+            
+            # If partial response, pad with fallback
+            valid_labels.extend([_FALLBACK_TOPIC] * (len(titles) - len(valid_labels)))
+            return valid_labels
 
-    return labels[:len(titles)]
+        except (OllamaError, Exception) as exc:
+            if attempt < CLASSIFICATION_MAX_RETRIES:
+                time.sleep(CLASSIFICATION_RETRY_BACKOFF_SECONDS * (attempt + 1))
+            else:
+                print(f"⚠️ classifier: batch failed after {CLASSIFICATION_MAX_RETRIES} retries: {exc}", file=sys.stderr)
+
+    return [_FALLBACK_TOPIC] * len(titles)
 
 
 def _extract_json(text: str) -> dict:
-    """Find the first *parseable* balanced {...} object in the text.
-
-    A greedy regex (\\{.*\\}) grabs from the FIRST '{' to the LAST '}'
-    in the whole response — if the model echoes part of the prompt
-    (which itself contains an example JSON object), that spans across
-    both and produces invalid JSON. Scanning brace depth instead finds
-    each well-formed object in order and tries them one at a time,
-    since the model may echo a non-JSON `{...}` fragment before the
-    real answer.
-    """
+    """Find and parse first balanced JSON block."""
     for candidate in _balanced_brace_blocks(text):
         try:
             return json.loads(candidate)
@@ -190,12 +163,11 @@ def _extract_json(text: str) -> dict:
         except json.JSONDecodeError:
             continue
 
-    print(f"⚠️ classifier: no parseable JSON object in model output: {text[:120]!r}", file=sys.stderr)
     return {}
 
 
 def _balanced_brace_blocks(text: str):
-    """Yield every top-level {...} substring, in order of appearance."""
+    """Yield top-level {...} blocks."""
     depth = 0
     start = None
     for i, char in enumerate(text):
@@ -206,11 +178,11 @@ def _balanced_brace_blocks(text: str):
         elif char == "}" and depth > 0:
             depth -= 1
             if depth == 0 and start is not None:
-                yield text[start:i + 1]
+                yield text[start : i + 1]
 
 
 def _balanced_bracket_blocks(text: str):
-    """Yield every top-level [...] substring, in order of appearance."""
+    """Yield top-level [...] blocks."""
     depth = 0
     start = None
     for i, char in enumerate(text):
@@ -221,4 +193,4 @@ def _balanced_bracket_blocks(text: str):
         elif char == "]" and depth > 0:
             depth -= 1
             if depth == 0 and start is not None:
-                yield text[start:i + 1]
+                yield text[start : i + 1]
