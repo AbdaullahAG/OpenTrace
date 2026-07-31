@@ -1,11 +1,12 @@
-// ambient.js — soft glow cursor ("the trace") + respects touch & reduced-motion
-// Purely decorative visual layer. Does not read/write any app state
-// and makes no calls into bridge.js — safe to include or remove independently.
+/**
+ * Decorative cursor layer implementation.
+ * Conditionally loads based on device capability and reduced-motion preferences.
+ */
 (function () {
   const canUseFineCursor = window.matchMedia(
     "(hover: hover) and (pointer: fine)",
   ).matches;
-  if (!canUseFineCursor) return; // leave native cursor + touch devices untouched
+  if (!canUseFineCursor) return; // Fallback to native cursor for touch devices
 
   const dot = document.getElementById("cursor-dot");
   const outline = document.getElementById("cursor-outline");
@@ -49,7 +50,7 @@
   }
   requestAnimationFrame(animate);
 
-  // Grow "the trace" over anything interactive
+  // Apply scale transformation over interactive elements
   const hoverTargets =
     'button, a, [role="button"], .drop-zone, input, select, textarea';
   document.addEventListener("mouseover", (e) => {

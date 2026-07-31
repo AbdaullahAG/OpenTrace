@@ -92,7 +92,7 @@ function renderReport(report) {
   `;
 }
 
-// --- Button Click Handler ---
+// --- Event Listeners ---
 selectFileBtn.addEventListener("click", async () => {
   try {
     if (
@@ -121,7 +121,7 @@ selectFileBtn.addEventListener("click", async () => {
 
     if (response && response.success) {
       renderReport(response.report);
-      currentStep = 1; // Advance the tutorial arrow!
+      currentStep = 1;
       showScreen(resultsSection);
     } else {
       alert(response?.message || "Something went wrong.");
@@ -135,11 +135,11 @@ selectFileBtn.addEventListener("click", async () => {
 });
 
 startOverBtn.addEventListener("click", () => {
-  currentStep = 0; // Reset the tutorial arrow!
+  currentStep = 0;
   showScreen(uploadSection);
 });
 
-// --- RESTORED & FIXED: Grandma-Friendly Tutorial Guide ---
+// --- Tutorial Guide Implementation ---
 let currentStep = 0;
 const steps = [
   { target: "select-file-btn", message: "Tip: click here" },
@@ -166,7 +166,7 @@ function updateGuide() {
 
   const targetElement = document.getElementById(steps[currentStep].target);
 
-  // FIXED: offsetHeight check prevents minimize bug
+  // Validate visibility to prevent rendering issues when the window is minimized
   if (
     !targetElement ||
     targetElement.closest(".screen.hidden") ||
@@ -181,10 +181,10 @@ function updateGuide() {
   guideOverlay.classList.remove("hidden");
   guideTipBox.textContent = steps[currentStep].message;
 
-  // FIXED: No scrollX or scrollY so the tip anchors perfectly to the fixed window view
+  // Calculate coordinates relative to the fixed viewport
   const rect = targetElement.getBoundingClientRect();
 
-  // FIXED: Pushed leftOffset much further left (580) for the second screen
+  // Adjust lateral offset conditionally based on the active step constraints
   const leftOffset = currentStep === 1 ? 580 : 380;
   const tipX = Math.max(20, rect.left - leftOffset);
   const tipY = Math.max(20, rect.top - 100);
@@ -206,7 +206,7 @@ function updateGuide() {
     `M ${startX} ${startY} Q ${cpX} ${cpY} ${endX} ${endY}`,
   );
 
-  // FIXED: Generate a dedicated tutorial shadow so it doesn't fight Claude's script
+  // Initialize an isolated shadow element specific to the active tutorial node
   let tutShadow = document.getElementById("tutorial-shadow");
   if (!tutShadow) {
     tutShadow = document.createElement("div");
@@ -216,12 +216,11 @@ function updateGuide() {
     document.body.appendChild(tutShadow);
   }
 
-  // Re-enable the pulsing cursor shadow over the target button
+  // Bind animation sequence
   shadowInterval = setInterval(() => {
     const targetX = rect.left + rect.width / 2;
     const targetY = rect.top + rect.height / 2;
 
-    // Get the current mouse position from Claude's ambient dot to start the animation
     const dot = document.getElementById("cursor-dot");
     let startMouseX = targetX;
     let startMouseY = targetY;
@@ -256,7 +255,7 @@ function updateGuide() {
 window.addEventListener("scroll", updateGuide);
 window.addEventListener("resize", updateGuide);
 
-// Hook into showScreen so the guide recalculates perfectly when switching screens
+// Ensure recalculation of guide coordinates upon DOM state changes
 let originalShowScreen =
   typeof showScreen !== "undefined" ? showScreen : function () {};
 showScreen = function (screenToShow) {
@@ -264,16 +263,14 @@ showScreen = function (screenToShow) {
   setTimeout(updateGuide, 100);
 };
 
-// Initialize the guide on load
 updateGuide();
 
-// --- Dark Mode Toggle ---
+// --- Theme Management ---
 const themeToggle = document.getElementById("theme-toggle");
 
 themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark-theme");
 
-  // Change the button text based on the current theme
   if (document.body.classList.contains("dark-theme")) {
     themeToggle.textContent = "☀️ Light Mode";
   } else {

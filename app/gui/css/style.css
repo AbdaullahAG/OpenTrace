@@ -9,10 +9,10 @@
   --card-bg: rgba(255, 255, 255, 0.62);
   --border-radius: 28px;
 
-  /* new soft-glow tokens (additive) */
-  --glow-a: 91, 110, 245; /* indigo — "the trace" */
-  --glow-b: 111, 214, 190; /* mint */
-  --glow-c: 168, 143, 255; /* violet */
+  /* Ambient glow properties */
+  --glow-a: 91, 110, 245;
+  --glow-b: 111, 214, 190;
+  --glow-c: 168, 143, 255;
   --border-hairline: rgba(21, 22, 43, 0.08);
   --radius-md: 18px;
   --shadow-glow: 0 20px 60px -20px rgba(91, 110, 245, 0.35);
@@ -48,16 +48,17 @@ body {
   line-height: 1.5;
   position: relative;
   overflow-x: hidden;
-  unicode-bidi: plaintext; /* lets Arabic runs render RTL automatically, even without a dir attribute */
+  /* Automatic RTL direction support */
+  unicode-bidi: plaintext;
 }
 
 @media (hover: hover) and (pointer: fine) {
   body {
-    cursor: none; /* replaced by the glow cursor trio below; untouched on touch/trackpad-only devices */
+    cursor: none;
   }
 }
 
-/* ---------- Ambient mesh background ---------- */
+/* --- Ambient Mesh Background --- */
 .mesh-bg {
   position: fixed;
   inset: 0;
@@ -150,7 +151,7 @@ body {
   }
 }
 
-/* ---------- Card / screens ---------- */
+/* --- Core Containers & Screens --- */
 .container {
   position: relative;
   z-index: 1;
@@ -222,7 +223,7 @@ p {
   margin: 0 auto;
 }
 
-/* ---------- Buttons ---------- */
+/* --- Inputs & Buttons --- */
 button {
   font-family: inherit;
   font-size: 1.2rem;
@@ -276,7 +277,7 @@ button:focus-visible {
   background-color: rgba(21, 22, 43, 0.09);
 }
 
-/* ---------- Spinner ---------- */
+/* --- Loading States --- */
 .spinner {
   width: 64px;
   height: 64px;
@@ -311,6 +312,7 @@ button:focus-visible {
   }
 }
 
+/* --- Result Visualization --- */
 .insight-box {
   background-color: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--border-hairline);
@@ -324,7 +326,7 @@ button:focus-visible {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* ---------- The Trace: glow cursor trio ---------- */
+/* --- Custom Cursor Layer --- */
 .cursor-dot,
 .cursor-outline,
 .cursor-shadow {
@@ -405,7 +407,7 @@ button:focus-visible {
   );
 }
 
-/* ---------- Guide overlay (tutorial) ---------- */
+/* --- Tutorial Overlay Components --- */
 .guide-overlay {
   position: fixed;
   top: 0;
@@ -456,7 +458,7 @@ button:focus-visible {
   }
 }
 
-/* ---------- Instructions box ---------- */
+/* --- Formatting Constraints --- */
 .instructions-box {
   background-color: rgba(255, 255, 255, 0.55);
   border: 1px solid var(--border-hairline);
@@ -489,7 +491,7 @@ button:focus-visible {
   color: var(--text-muted);
 }
 
-/* ---------- Drag and drop zone ---------- */
+/* --- Media Upload Region --- */
 .drop-zone {
   border: 1.5px dashed rgba(var(--glow-a), 0.45);
   border-radius: var(--radius-md);
@@ -516,7 +518,7 @@ button:focus-visible {
   letter-spacing: 2px;
 }
 
-/* ---------- Small screens ---------- */
+/* --- Responsive Adjustments --- */
 @media (max-width: 480px) {
   .container {
     padding: 32px 22px;
@@ -532,7 +534,7 @@ button:focus-visible {
   }
 }
 
-/* ---------- Dark Mode Toggle Button ---------- */
+/* --- Theme Controls --- */
 .theme-btn {
   position: fixed;
   top: 20px;
@@ -552,7 +554,7 @@ button:focus-visible {
   background: rgba(123, 139, 255, 0.1);
 }
 
-/* ---------- GIF Frames ---------- */
+/* --- Contextual Media Frames --- */
 .gif-frame {
   width: 100%;
   max-width: 400px;
@@ -579,9 +581,9 @@ button:focus-visible {
   font-weight: 600;
 }
 
-/* ----- DARK MODE UI FIXES ----- */
+/* --- Theme Overrides (Dark Mode Integration) --- */
 
-/* 1. Results Page Variables */
+/* Standardize report presentation palette */
 body.dark-theme {
   --report-card-bg: rgba(255, 255, 255, 0.05);
   --report-text-main: #e4e5f1;
@@ -591,7 +593,7 @@ body.dark-theme {
   --report-link: #8fa1ff;
 }
 
-/* 2. "How to get your data" Box & Algorithm Summary Box */
+/* Standardize component transparency and borders */
 body.dark-theme .instructions-box,
 body.dark-theme .insight-box {
   background: rgba(255, 255, 255, 0.05);
@@ -599,7 +601,7 @@ body.dark-theme .insight-box {
   color: #e4e5f1;
 }
 
-/* 3. Tutorial Tip Boxes & Arrow */
+/* Tutorial overlay adjustments */
 body.dark-theme #guide-tip-box {
   background: #1a1b2e !important;
   color: #ffffff !important;
@@ -610,7 +612,7 @@ body.dark-theme #guide-path {
   stroke: rgba(255, 255, 255, 0.5) !important;
 }
 
-/* 4. Start Over Button Visibility */
+/* Enforce visibility on secondary actions */
 body.dark-theme .secondary-btn {
   background: rgba(255, 255, 255, 0.1);
   color: #e4e5f1;
