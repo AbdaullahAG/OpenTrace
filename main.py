@@ -7,11 +7,14 @@ import webview
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.ingestion.dispatcher import Dispatcher
-from app.scoring.adapters import watch_items_to_scoring_input
-from app.scoring.aggregator import aggregate_scores
 
 
-class BackendAPI:
+# Keep one Dispatcher instance alive for the whole app lifetime
+# so phase-2 analysis can reuse the cached dataset from phase-1 parsing.
+dispatcher = Dispatcher()
+
+
+class API:
     """Exposed to the frontend via pywebview's js_api.
 
     Every method here is callable from JS as
@@ -47,39 +50,35 @@ class BackendAPI:
             return None
         return result[0]
 
-    def run_analysis(self, path: str):
-        """Executes the analysis pipeline on a Takeout folder or ZIP.
-        
-        Returns the BubbleReport dict (see app/schemas.py) serialized 
-        as JSON-safe data.
-        """
+    def parse(self, path: str):
+        """Phase 1: parse input and cache dataset in dispatcher."""
         try:
-            dataset = Dispatcher().run(path)
+            return dispatcher.parse(path)
         except FileNotFoundError as exc:
+            return {"success": False, "message": str(exc)}
+        except (ValueError, RuntimeError) as exc:
             return {"success": False, "message": str(exc)}
         except Exception as exc:
             traceback.print_exc()
             return {"success": False, "message": f"تعذّرت قراءة الملفات: {exc}"}
 
-        if not dataset.watched_items:
-            return {
-                "success": False,
-                "message": "لم يتم العثور على سجل مشاهدة في هذا المسار.",
-            }
-
-        scoring_input = watch_items_to_scoring_input(dataset)
-
+    def analyze(self, sample_size: int = 300):
+        """Phase 2: run AI analysis over the cached dataset."""
         try:
-            report = aggregate_scores(scoring_input)
+            return dispatcher.analyze(sample_size)
+        except RuntimeError as exc:
+            return {"success": False, "message": str(exc)}
         except Exception as exc:
             traceback.print_exc()
             return {"success": False, "message": f"فشل التحليل: {exc}"}
 
-        return {"success": True, "report": report}
+    def run_analysis(self, sample_size: int = 300):
+        """Backward-compatible alias used by older frontend code."""
+        return self.analyze(sample_size)
 
 
 def start():
-    api = BackendAPI()
+    api = API()
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     html_path = os.path.join(current_dir, "app", "gui", "index.html")

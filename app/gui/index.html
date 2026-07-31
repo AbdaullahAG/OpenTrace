@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,11 +11,79 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/style.css" />
+    <style>
+      body {
+        font-family: "Reem Kufi", sans-serif;
+        line-height: 1.8;
+      }
+
+      .welcome-container {
+        text-align: right;
+        padding: 10px 20px;
+      }
+
+      .welcome-container h2 {
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: var(--text-main, #222);
+      }
+
+      .welcome-container p {
+        font-size: 16px;
+        margin-bottom: 25px;
+        color: var(--text-muted, #555);
+      }
+
+      .instructions-box {
+        background-color: var(--bg-alt, #f8f9fa);
+        border: 1px solid var(--border-color, #e0e0e0);
+        border-radius: 12px;
+        padding: 20px 25px;
+        margin-bottom: 30px;
+      }
+
+      .instructions-box h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: var(--text-main, #333);
+      }
+
+      .instructions-box ol,
+      .instructions-box ul {
+        margin: 0;
+        padding-right: 20px;
+      }
+
+      .instructions-box li {
+        font-size: 15px;
+        margin-bottom: 12px;
+        color: var(--text-main, #444);
+      }
+
+      .instructions-box li:last-child {
+        margin-bottom: 0;
+      }
+
+      .drop-zone {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+      }
+
+      .primary-btn {
+        font-family: "Reem Kufi", sans-serif;
+        font-size: 16px;
+        padding: 12px 30px;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
-    <button id="theme-toggle" class="theme-btn">🌙 Dark Mode</button>
+    <button id="theme-toggle" class="theme-btn">🌙 الوضع الداكن</button>
 
-    <!-- Decorative background mesh -->
     <div class="mesh-bg" aria-hidden="true">
       <div class="blob blob-a"></div>
       <div class="blob blob-b"></div>
@@ -56,36 +124,39 @@
     <main class="container">
       <div id="upload-section" class="screen active">
         <div class="welcome-container">
-          <h2>Welcome to OpenTrace</h2>
+          <h2>مرحباً بك في OpenTrace</h2>
           <p>
-            Let's safely analyze your viewing habits. Your data never leaves
-            this computer.
+            دعنا نحلل عادات مشاهدتك بأمان. بياناتك لن تغادر هذا الجهاز أبداً.
           </p>
 
-          <!-- Instructions -->
           <div class="instructions-box">
-            <h3>How to get your data:</h3>
+            <h3>كيف تحصل على بياناتك:</h3>
             <ol>
               <li>
-                Go to <strong>takeout.google.com</strong> to download your
-                YouTube history.
+                اذهب إلى <strong>takeout.google.com</strong> لتحميل سجل بياناتك
+                في يوتيوب.
               </li>
               <li>
-                Click the button below to select the downloaded
-                <strong>.zip file</strong>. (No need to unzip it!)
+                انقر على خيار "تنسيقات متعددة" (Multiple Formats) لتعديل
+                الإعدادات.
+              </li>
+              <li>
+                تأكد من تغيير صيغة <strong>"سجل المشاهدة" (History)</strong> إلى
+                <strong>JSON</strong> حصراً.
+              </li>
+              <li>
+                تأكد من تضمين ملف <strong>"الاشتراكات" (Subscriptions)</strong>.
+              </li>
+              <li>
+                انقر على الزر أدناه لاختيار <strong>ملف الـ .zip</strong> الذي
+                قمت بتنزيله.
               </li>
             </ol>
           </div>
 
-          <div class="gif-frame">
-            <span class="gif-placeholder-text">Your Upload GIF goes here</span>
-            <!-- <img src="assets/upload-tutorial.gif" alt="Upload Tutorial" /> -->
-          </div>
-
-          <!-- Drop zone container -->
           <div id="drop-zone" class="drop-zone">
             <button id="select-file-btn" class="primary-btn">
-              Browse for .zip File
+              اختر ملف الـ .zip
             </button>
           </div>
         </div>
@@ -93,26 +164,35 @@
 
       <div id="loading-section" class="screen hidden">
         <div class="spinner"></div>
-        <h2 id="loading-status">Reading your files...</h2>
-        <div class="gif-frame" style="margin-top: 10px; margin-bottom: 20px">
-          <span class="gif-placeholder-text">File Picker GIF goes here</span>
-          <!-- <img src="assets/picker-tutorial.gif" alt="File Picker Tutorial" /> -->
+        <h2 id="loading-status">جارٍ قراءة ملفاتك...</h2>
+        <p>قد يستغرق هذا بعض الوقت بناءً على حجم سجل مشاهداتك.</p>
+      </div>
+
+      <!-- شاشة البيانات الأولية (Metadata) -->
+      <div id="metadata-section" class="screen hidden">
+        <div class="welcome-container">
+          <h2>اكتملت قراءة البيانات</h2>
+          <p>تم استخراج سجل المشاهدات والاشتراكات بنجاح. إليك نظرة أولية:</p>
+
+          <div class="instructions-box" style="text-align: right">
+            <ul style="list-style-type: none; padding: 0" id="metadata-list">
+              <!-- سيتم تعبئة هذه القائمة عبر جافاسكريبت -->
+            </ul>
+          </div>
+
+          <div class="drop-zone">
+            <button id="start-analysis-btn" class="primary-btn">
+              تشغيل التحليل الخوارزمي
+            </button>
+          </div>
         </div>
-        <p>
-          This might take a few minutes depending on how many videos you've
-          watched.
-        </p>
       </div>
 
       <div id="results-section" class="screen hidden">
-        <h2>Your Algorithm Summary</h2>
+        <h2>ملخص الخوارزمية الخاصة بك</h2>
         <div id="llm-insight-box" class="insight-box"></div>
 
-        <div class="gif-frame">
-          <span class="gif-placeholder-text">Your Results GIF goes here</span>
-        </div>
-
-        <button id="start-over-btn" class="secondary-btn">Start Over</button>
+        <button id="start-over-btn" class="secondary-btn">ابدأ من جديد</button>
       </div>
     </main>
 

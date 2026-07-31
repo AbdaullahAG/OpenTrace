@@ -1,11 +1,17 @@
 const uploadSection = document.getElementById("upload-section");
 const loadingSection = document.getElementById("loading-section");
+const metadataSection = document.getElementById("metadata-section");
 const resultsSection = document.getElementById("results-section");
 
 const selectFileBtn = document.getElementById("select-file-btn");
+const startAnalysisBtn = document.getElementById("start-analysis-btn");
 const startOverBtn = document.getElementById("start-over-btn");
+
 const loadingStatus = document.getElementById("loading-status");
+const metadataList = document.getElementById("metadata-list");
 const insightBox = document.getElementById("llm-insight-box");
+
+let selectedFilePath = "";
 
 function showScreen(screenToShow) {
   uploadSection.classList.remove("active");
@@ -14,6 +20,11 @@ function showScreen(screenToShow) {
   loadingSection.classList.remove("active");
   loadingSection.classList.add("hidden");
 
+  if (metadataSection) {
+    metadataSection.classList.remove("active");
+    metadataSection.classList.add("hidden");
+  }
+
   resultsSection.classList.remove("active");
   resultsSection.classList.add("hidden");
 
@@ -21,7 +32,6 @@ function showScreen(screenToShow) {
   screenToShow.classList.add("active");
 }
 
-/** Render the BubbleReport object into the results section. */
 function renderReport(report) {
   const score = report.bubble_score ?? 0;
   const flags = report.manipulation_flags ?? [];
@@ -30,20 +40,31 @@ function renderReport(report) {
 
   const topics = report.topic_distribution || {};
   const topicLabels = {
-    politics: "سياسة", sports: "رياضة", entertainment: "ترفيه", 
-    technology: "تكنولوجيا", news: "أخبار", education: "تعليم", 
-    music: "موسيقى", gaming: "ألعاب", religion: "دين", other: "أخرى"
+    politics: "سياسة",
+    sports: "رياضة",
+    entertainment: "ترفيه",
+    technology: "تكنولوجيا",
+    news: "أخبار",
+    education: "تعليم",
+    music: "موسيقى",
+    gaming: "ألعاب",
+    religion: "دين",
+    other: "أخرى",
   };
   const topicsSorted = Object.entries(topics).sort((a, b) => b[1] - a[1]);
   let topicsHTML = "";
   if (topicsSorted.length > 0) {
     topicsHTML = `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 10px; font-size: 18px;">أبرز التصنيفات التي شاهدتها:</h4>
     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px;">
-      ${topicsSorted.map(([topic, count]) => `
+      ${topicsSorted
+        .map(
+          ([topic, count]) => `
         <div style="background: var(--report-alt-bg, #f0f4f8); padding: 8px 12px; border-radius: 20px; font-size: 14px; border: 1px solid var(--report-border, #ddd); color: var(--report-text-main, #333);">
           <strong>${topicLabels[topic] || topic}</strong>: ${count}
         </div>
-      `).join('')}
+      `,
+        )
+        .join("")}
     </div>`;
   }
 
@@ -53,44 +74,49 @@ function renderReport(report) {
     channelsHTML = `<h4 style="color: var(--report-text-main, #222); margin-bottom: 10px; font-size: 18px;">القنوات الأكثر مشاهدة:</h4>
     <div style="margin-bottom: 30px;">
       <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
-        ${channels.map(c => `
+        ${channels
+          .map(
+            (c) => `
           <li style="background: var(--report-alt-bg, #f8f9fa); padding: 10px 15px; border-radius: 8px; border-right: 4px solid #3498db; display: flex; justify-content: space-between; align-items: center; color: var(--report-text-main, #333);">
             <span style="font-weight: 500; word-break: break-word;">${c.name}</span>
             <span style="background: var(--report-small-bg, #e9ecef); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: var(--report-text-muted, #555); white-space: nowrap;">${c.count} مشاهدة</span>
           </li>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </ul>
     </div>`;
   }
 
   const scoreColor =
     score > 60 ? "#c0392b" : score > 35 ? "#e67e22" : "#27ae60";
-  const scoreBg = score > 60 ? "#fdf2f2" : score > 35 ? "#fff9f2" : "#f0fdf4";
 
   let scoreDescription = "";
   if (score <= 35) {
     scoreDescription = "فقاعتك صحية! أنت تشاهد محتوى متنوعاً ومن مصادر مختلفة.";
   } else if (score <= 60) {
-    scoreDescription = "فقاعتك متوسطة. خوارزميات التوصية بدأت تحصرك في مسارات ومواضيع محددة.";
+    scoreDescription =
+      "فقاعتك متوسطة. خوارزميات التوصية بدأت تحصرك في مسارات ومواضيع محددة.";
   } else {
-    scoreDescription = "فقاعتك شديدة الانغلاق! الخوارزمية تتحكم بما تراه بشكل كبير وأنت تدور في نفس الدوامة.";
+    scoreDescription =
+      "فقاعتك شديدة الانغلاق! الخوارزمية تتحكم بما تراه بشكل كبير وأنت تدور في نفس الدوامة.";
   }
-  
+
   let topTopicMsg = "";
   const totalTopicCount = Object.values(topics).reduce((a, b) => a + b, 0);
   if (topicsSorted.length > 0 && totalTopicCount > 0) {
     const topTopic = topicsSorted[0][0];
     let dominantTopic = topTopic;
     let dominantCount = topicsSorted[0][1];
-    
+
     if (topTopic === "other" && topicsSorted.length > 1) {
       dominantTopic = topicsSorted[1][0];
       dominantCount = topicsSorted[1][1];
     }
-    
+
     const percentage = Math.round((dominantCount / totalTopicCount) * 100);
     const topicName = topicLabels[dominantTopic] || dominantTopic;
-    
+
     topTopicMsg = `محتواك يتمركز حول (<strong>${topicName}</strong>) بنسبة ${percentage}%.`;
   }
 
@@ -146,8 +172,6 @@ function renderReport(report) {
 
   insightBox.innerHTML = `
     <div dir="rtl" style="text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-      
-      <!-- New Bubble Score Container -->
       <h3 style="margin: 0 0 20px 0; color: var(--report-text-main, #333); font-size: 20px; text-align: center;">درجة فقاعتك الخوارزمية</h3>
       <div style="display: flex; justify-content: center; margin-bottom: 20px;">
         <div style="background: var(--report-card-bg, rgba(255, 255, 255, 0.15)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 2px solid ${scoreColor}; border-radius: 50%; width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; flex-direction: column; box-shadow: inset 0 4px 20px rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.05);">
@@ -159,7 +183,6 @@ function renderReport(report) {
       </div>
       
       ${scoreExplanationHTML}
-
       <h4 style="color: var(--report-text-main, #222); margin-bottom: 5px; font-size: 18px;">مؤشرات التأثير:</h4>
       ${flagsHTML}
       ${topicsHTML}
@@ -174,54 +197,74 @@ function renderReport(report) {
   `;
 }
 
-// --- Event Listeners ---
 selectFileBtn.addEventListener("click", async () => {
   try {
-    if (
-      typeof window.pywebview === "undefined" ||
-      typeof window.pywebview.api === "undefined"
-    ) {
+    if (!window.pywebview || !window.pywebview.api) {
       throw new Error("PyWebView API is not loaded.");
     }
 
-    loadingStatus.textContent = "Opening file picker...";
+    loadingStatus.textContent = "جارٍ فتح نافذة اختيار الملف...";
     showScreen(loadingSection);
 
-    const path = await window.pywebview.api.select_takeout_path();
+    selectedFilePath = await window.pywebview.api.select_takeout_path();
 
-    if (!path) {
+    if (!selectedFilePath) {
       showScreen(uploadSection);
       return;
     }
 
-    loadingStatus.textContent =
-      "Extracting and analyzing data... This may take a moment.";
+    loadingStatus.textContent = "جارٍ استخراج البيانات الأولية...";
 
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    const response = await window.pywebview.api.run_analysis(path);
+    const response = await window.pywebview.api.parse(selectedFilePath);
 
     if (response && response.success) {
-      renderReport(response.report);
+      metadataList.innerHTML = `
+        <li style="margin-bottom: 10px;">📊 إجمالي الفيديوهات المقروءة: <strong>${response.stats.total_watched}</strong></li>
+        <li style="margin-bottom: 10px;">📅 فترة التحليل: <strong>${response.stats.analysis_period_days} يوماً</strong></li>
+        <li style="margin-bottom: 10px;">🔔 إجمالي القنوات المشترك بها: <strong>${response.stats.subscribed_channels}</strong></li>
+      `;
       currentStep = 1;
-      showScreen(resultsSection);
+      showScreen(metadataSection);
     } else {
-      alert(response?.message || "Something went wrong.");
+      alert(response?.message || "حدث خطأ أثناء قراءة الملف.");
       showScreen(uploadSection);
     }
   } catch (error) {
-    console.error("Bridge Error Details:", error);
-    alert("Failed to communicate with Python backend. Check the console!");
+    console.error("Error:", error);
+    alert("فشل الاتصال بالخادم الخلفي.");
     showScreen(uploadSection);
+  }
+});
+
+startAnalysisBtn.addEventListener("click", async () => {
+  try {
+    loadingStatus.textContent =
+      "جارٍ تشغيل تحليل الذكاء الاصطناعي... قد يستغرق هذا دقيقة.";
+    showScreen(loadingSection);
+
+    const response = await window.pywebview.api.analyze(300);
+
+    if (response && response.success) {
+      renderReport(response.report);
+      currentStep = 2;
+      showScreen(resultsSection);
+    } else {
+      alert(response?.message || "حدث خطأ أثناء التحليل.");
+      showScreen(metadataSection);
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    alert("فشل الاتصال بالخادم الخلفي.");
+    showScreen(metadataSection);
   }
 });
 
 startOverBtn.addEventListener("click", () => {
   currentStep = 0;
+  selectedFilePath = "";
   showScreen(uploadSection);
 });
 
-// --- Tutorial Guide Implementation ---
 let currentStep = 0;
 const steps = [
   { target: "select-file-btn", message: "Tip: click here" },
@@ -248,7 +291,6 @@ function updateGuide() {
 
   const targetElement = document.getElementById(steps[currentStep].target);
 
-  // Validate visibility to prevent rendering issues when the window is minimized
   if (
     !targetElement ||
     targetElement.closest(".screen.hidden") ||
@@ -263,10 +305,7 @@ function updateGuide() {
   guideOverlay.classList.remove("hidden");
   guideTipBox.textContent = steps[currentStep].message;
 
-  // Calculate coordinates relative to the fixed viewport
   const rect = targetElement.getBoundingClientRect();
-
-  // Adjust lateral offset conditionally based on the active step constraints
   const leftOffset = currentStep === 1 ? 580 : 380;
   const tipX = Math.max(20, rect.left - leftOffset);
   const tipY = Math.max(20, rect.top - 100);
@@ -288,7 +327,6 @@ function updateGuide() {
     `M ${startX} ${startY} Q ${cpX} ${cpY} ${endX} ${endY}`,
   );
 
-  // Initialize an isolated shadow element specific to the active tutorial node
   let tutShadow = document.getElementById("tutorial-shadow");
   if (!tutShadow) {
     tutShadow = document.createElement("div");
@@ -298,7 +336,6 @@ function updateGuide() {
     document.body.appendChild(tutShadow);
   }
 
-  // Bind animation sequence
   shadowInterval = setInterval(() => {
     const targetX = rect.left + rect.width / 2;
     const targetY = rect.top + rect.height / 2;
@@ -337,7 +374,6 @@ function updateGuide() {
 window.addEventListener("scroll", updateGuide);
 window.addEventListener("resize", updateGuide);
 
-// Ensure recalculation of guide coordinates upon DOM state changes
 let originalShowScreen =
   typeof showScreen !== "undefined" ? showScreen : function () {};
 showScreen = function (screenToShow) {
@@ -347,15 +383,14 @@ showScreen = function (screenToShow) {
 
 updateGuide();
 
-// --- Theme Management ---
 const themeToggle = document.getElementById("theme-toggle");
 
 themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark-theme");
 
   if (document.body.classList.contains("dark-theme")) {
-    themeToggle.textContent = "☀️ Light Mode";
+    themeToggle.textContent = "☀️ الوضع الفاتح";
   } else {
-    themeToggle.textContent = "🌙 Dark Mode";
+    themeToggle.textContent = "🌙 الوضع الداكن";
   }
 });
