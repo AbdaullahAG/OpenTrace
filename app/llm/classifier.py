@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from collections import Counter
 
 from app.constants import CLASSIFICATION_BATCH_SIZE, TOPIC_CATEGORIES
@@ -98,13 +99,21 @@ def classify_topics(
     pending_titles = [titles[i] for i in pending_indices]
     pending_labels: list[str] = []
 
+    deadline = time.time() + 240.0
+
     for start in range(0, len(pending_titles), CLASSIFICATION_BATCH_SIZE):
+        if time.time() > deadline:
+            print("⚠️ classifier: 4-minute time limit exceeded, stopping early to prevent overheating.", file=sys.stderr)
+            break
         batch = pending_titles[start : start + CLASSIFICATION_BATCH_SIZE]
         batch_labels = _classify_batch(client, batch)
         pending_labels.extend(
             label if label in TOPIC_CATEGORIES else _FALLBACK_TOPIC
             for label in batch_labels
         )
+
+    if len(pending_labels) < len(pending_titles):
+        pending_labels.extend([_FALLBACK_TOPIC] * (len(pending_titles) - len(pending_labels)))
 
     # ── Pass 3: write LLM labels back + populate channel cache ──
     for i, label in zip(pending_indices, pending_labels):
@@ -173,6 +182,14 @@ def _extract_json(text: str) -> dict:
         except json.JSONDecodeError:
             continue
 
+    for candidate in _balanced_bracket_blocks(text):
+        try:
+            arr = json.loads(candidate)
+            if isinstance(arr, list):
+                return {"classifications": arr}
+        except json.JSONDecodeError:
+            continue
+
     print(f"⚠️ classifier: no parseable JSON object in model output: {text[:120]!r}", file=sys.stderr)
     return {}
 
@@ -187,6 +204,21 @@ def _balanced_brace_blocks(text: str):
                 start = i
             depth += 1
         elif char == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start is not None:
+                yield text[start:i + 1]
+
+
+def _balanced_bracket_blocks(text: str):
+    """Yield every top-level [...] substring, in order of appearance."""
+    depth = 0
+    start = None
+    for i, char in enumerate(text):
+        if char == "[":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif char == "]" and depth > 0:
             depth -= 1
             if depth == 0 and start is not None:
                 yield text[start:i + 1]

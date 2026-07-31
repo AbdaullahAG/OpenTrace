@@ -27,6 +27,9 @@ class ReportMetadata(TypedDict):
     unique_channels: int
     sampled_for_ai: bool      # True if a stratified sample was used for classification
     sample_size: int          # items actually sent to the LLM (== total_items if not sampled)
+    analysis_period_days: int
+    exposure_total: int
+    exposure_unsubscribed: int
 
 
 class BubbleReport(TypedDict):

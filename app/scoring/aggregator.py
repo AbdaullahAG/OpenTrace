@@ -21,6 +21,7 @@ Performance optimisations applied here (v2)
 from __future__ import annotations
 
 import sys
+from datetime import datetime
 
 from app.constants import SCORE_WEIGHTS
 from app.llm.classifier import classify_topics
@@ -84,6 +85,20 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
         )
     )
 
+    timestamps = []
+    for item in clean_items:
+        if "timestamp" in item:
+            try:
+                dt = datetime.fromisoformat(item["timestamp"].replace("Z", "+00:00"))
+                timestamps.append(dt)
+            except ValueError:
+                pass
+    analysis_period_days = max(1, (max(timestamps) - min(timestamps)).days) if timestamps else 0
+
+    exposure_items = [i for i in clean_items if "is_subscribed" in i]
+    exposure_total = len(exposure_items)
+    exposure_unsubscribed = sum(1 for i in exposure_items if not i["is_subscribed"])
+
     report = {
         "bubble_score": bubble_score,
         "diversity_score": diversity_score,
@@ -99,6 +114,9 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
             "unique_channels": len({i["channel"] for i in clean_items if i.get("channel")}),
             "sampled_for_ai": was_sampled,
             "sample_size": len(sample_items) if was_sampled else len(clean_items),
+            "analysis_period_days": analysis_period_days,
+            "exposure_total": exposure_total,
+            "exposure_unsubscribed": exposure_unsubscribed,
         },
     }
     report["suggested_alternatives"] = suggest_alternatives(report)
@@ -168,5 +186,8 @@ def _empty_report() -> dict:
             "unique_channels": 0,
             "sampled_for_ai": False,
             "sample_size": 0,
+            "analysis_period_days": 0,
+            "exposure_total": 0,
+            "exposure_unsubscribed": 0,
         },
     }
