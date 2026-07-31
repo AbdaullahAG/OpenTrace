@@ -10,5 +10,9 @@ run:
 check:
 	curl -s http://localhost:11434/api/tags || echo "Ollama مو شغال"
 
+test:
+	.venv/bin/python -m pytest tests/ -v
+
 clean:
-	rm -rf .venv __pycache__
+	rm -rf .venv .pytest_cache
+	find . -type d -name "__pycache__" -exec rm -rf {} +
