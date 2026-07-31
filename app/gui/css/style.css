@@ -1,11 +1,24 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap");
+
 :root {
-  --bg-color: #f4f7f6;
-  --text-color: #1a1a1a;
-  --text-muted: #555555;
-  --primary-color: #0056b3;
-  --primary-hover: #004085;
-  --card-bg: #ffffff;
-  --border-radius: 16px;
+  --bg-color: #f4f5fb;
+  --text-color: #15162b;
+  --text-muted: #5d5f79;
+  --primary-color: #5b6ef5;
+  --primary-hover: #4453d9;
+  --card-bg: rgba(255, 255, 255, 0.62);
+  --border-radius: 28px;
+
+  /* new soft-glow tokens (additive) */
+  --glow-a: 91, 110, 245; /* indigo — "the trace" */
+  --glow-b: 111, 214, 190; /* mint */
+  --glow-c: 168, 143, 255; /* violet */
+  --border-hairline: rgba(21, 22, 43, 0.08);
+  --radius-md: 18px;
+  --shadow-glow: 0 20px 60px -20px rgba(91, 110, 245, 0.35);
+  --font-sans:
+    "IBM Plex Sans", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial,
+    sans-serif;
 }
 
 * {
@@ -15,10 +28,8 @@
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
-  background-color: var(--bg-color);
+  font-family: var(--font-sans);
+  background: var(--bg-color);
   color: var(--text-color);
   display: flex;
   justify-content: center;
@@ -26,16 +37,133 @@ body {
   min-height: 100vh;
   font-size: 18px;
   line-height: 1.5;
+  position: relative;
+  overflow-x: hidden;
+  unicode-bidi: plaintext; /* lets Arabic runs render RTL automatically, even without a dir attribute */
 }
 
+@media (hover: hover) and (pointer: fine) {
+  body {
+    cursor: none; /* replaced by the glow cursor trio below; untouched on touch/trackpad-only devices */
+  }
+}
+
+/* ---------- Ambient mesh background ---------- */
+.mesh-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.55;
+  will-change: transform;
+}
+
+.blob-a {
+  width: 520px;
+  height: 520px;
+  top: -140px;
+  left: -120px;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(var(--glow-a), 0.55),
+    transparent 70%
+  );
+  animation: floatA 26s ease-in-out infinite;
+}
+
+.blob-b {
+  width: 440px;
+  height: 440px;
+  bottom: -160px;
+  right: -100px;
+  background: radial-gradient(
+    circle at 60% 40%,
+    rgba(var(--glow-b), 0.5),
+    transparent 70%
+  );
+  animation: floatB 32s ease-in-out infinite;
+}
+
+.blob-c {
+  width: 360px;
+  height: 360px;
+  top: 42%;
+  left: 62%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(var(--glow-c), 0.45),
+    transparent 70%
+  );
+  animation: floatC 22s ease-in-out infinite;
+}
+
+@keyframes floatA {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(60px, 40px) scale(1.08);
+  }
+}
+@keyframes floatB {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-50px, -30px) scale(1.1);
+  }
+}
+@keyframes floatC {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-40px, 30px) scale(0.95);
+  }
+  66% {
+    transform: translate(30px, -40px) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob {
+    animation: none;
+  }
+}
+
+/* ---------- Card / screens ---------- */
 .container {
-  background-color: var(--card-bg);
-  padding: 40px 30px;
+  position: relative;
+  z-index: 1;
+  background: var(--card-bg);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  padding: 48px 40px;
   border-radius: var(--border-radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    var(--shadow-glow),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset;
   width: 90%;
   max-width: 600px;
   text-align: center;
+}
+
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
 }
 
 .screen {
@@ -64,12 +192,14 @@ body {
 h1 {
   font-size: 2.2rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text-color);
 }
 
 h2 {
   font-size: 1.6rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 p {
@@ -78,35 +208,47 @@ p {
 
 .help-text {
   font-size: 0.95rem;
-  color: #666;
+  color: var(--text-muted);
   max-width: 80%;
   margin: 0 auto;
 }
 
+/* ---------- Buttons ---------- */
 button {
   font-family: inherit;
   font-size: 1.2rem;
   font-weight: bold;
   padding: 18px 32px;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
   transition:
     background-color 0.2s,
+    box-shadow 0.2s,
     transform 0.1s;
   width: 100%;
   max-width: 320px;
 }
 
+button:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 3px;
+}
+
 .primary-btn {
-  background-color: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color), #7b8bff);
   color: white;
-  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.25);
+  box-shadow: 0 10px 30px -8px rgba(91, 110, 245, 0.55);
 }
 
 .primary-btn:hover {
-  background-color: var(--primary-hover);
+  background: linear-gradient(
+    135deg,
+    var(--primary-hover),
+    var(--primary-color)
+  );
   transform: translateY(-2px);
+  box-shadow: 0 14px 36px -8px rgba(91, 110, 245, 0.65);
 }
 
 .primary-btn:active {
@@ -114,23 +256,40 @@ button {
 }
 
 .secondary-btn {
-  background-color: #e0e0e0;
-  color: #333;
+  background-color: rgba(21, 22, 43, 0.05);
+  color: var(--text-color);
   font-size: 1.1rem;
   padding: 14px 24px;
+  border: 1px solid var(--border-hairline);
 }
 
 .secondary-btn:hover {
-  background-color: #c8c8c8;
+  background-color: rgba(21, 22, 43, 0.09);
 }
 
+/* ---------- Spinner ---------- */
 .spinner {
-  width: 60px;
-  height: 60px;
-  border: 6px solid #f3f3f3;
-  border-top: 6px solid var(--primary-color);
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  background: conic-gradient(
+    from 0deg,
+    rgba(var(--glow-a), 0) 0%,
+    rgba(var(--glow-a), 0.9) 60%,
+    rgba(var(--glow-a), 0) 100%
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 6px),
+    #000 calc(100% - 6px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 6px),
+    #000 calc(100% - 6px)
+  );
+  filter: drop-shadow(0 0 14px rgba(var(--glow-a), 0.5));
+  animation: spin 1.1s linear infinite;
   margin: 10px auto;
 }
 
@@ -144,32 +303,35 @@ button {
 }
 
 .insight-box {
-  background-color: #f8f9fa;
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
   padding: 24px;
   width: 100%;
   text-align: left;
   font-size: 1.05rem;
   color: var(--text-color);
+  unicode-bidi: plaintext;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-body {
-  background: linear-gradient(135deg, #f4f7f6, #e0e8e5, #f4f7f6);
-  background-size: 200% 200%;
-  animation: breathingBackground 10s ease infinite;
-  cursor: none;
+/* ---------- The Trace: glow cursor trio ---------- */
+.cursor-dot,
+.cursor-outline,
+.cursor-shadow {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border-radius: 50%;
 }
 
-@keyframes breathingBackground {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
+@media (hover: hover) and (pointer: fine) {
+  .cursor-dot,
+  .cursor-outline,
+  .cursor-shadow {
+    display: block;
   }
 }
 
@@ -177,13 +339,9 @@ body {
   width: 8px;
   height: 8px;
   background-color: var(--primary-color);
-  border-radius: 50%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
   z-index: 9999;
   transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px 2px rgba(var(--glow-a), 0.8);
   transition:
     width 0.2s,
     height 0.2s,
@@ -191,14 +349,9 @@ body {
 }
 
 .cursor-outline {
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--primary-color);
-  border-radius: 50%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid rgba(var(--glow-a), 0.55);
   z-index: 9998;
   transform: translate(-50%, -50%);
   transition:
@@ -206,8 +359,21 @@ body {
     height 0.2s,
     background-color 0.2s,
     border-color 0.2s;
-  transition-property: top, left, width, height;
-  transition-duration: 0.1s, 0.1s, 0.2s, 0.2s;
+}
+
+.cursor-shadow {
+  width: 120px;
+  height: 120px;
+  z-index: 9997;
+  background: radial-gradient(
+    circle,
+    rgba(var(--glow-a), 0.28),
+    transparent 70%
+  );
+  filter: blur(4px);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
 .cursor-hover .cursor-dot {
@@ -216,12 +382,21 @@ body {
 }
 
 .cursor-hover .cursor-outline {
-  width: 60px;
-  height: 60px;
-  background-color: rgba(0, 86, 179, 0.1);
+  width: 56px;
+  height: 56px;
+  background-color: rgba(var(--glow-a), 0.12);
   border-color: var(--primary-hover);
 }
 
+.cursor-hover .cursor-shadow {
+  background: radial-gradient(
+    circle,
+    rgba(var(--glow-a), 0.4),
+    transparent 70%
+  );
+}
+
+/* ---------- Guide overlay (tutorial) ---------- */
 .guide-overlay {
   position: fixed;
   top: 0;
@@ -240,15 +415,15 @@ body {
 
 .guide-tip-box {
   position: absolute;
-  background-color: transparent;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
   color: var(--text-color);
-  padding: 8px 24px;
-  border-radius: 8px;
-  font-size: 1.5rem;
-  font-weight: 900;
-  border: 4px solid var(--text-color);
-  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.1);
-  transform: rotate(-3deg);
+  padding: 10px 22px;
+  border-radius: 14px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: 2px solid var(--primary-color);
+  box-shadow: 0 10px 30px -8px rgba(91, 110, 245, 0.5);
 }
 
 .guide-svg {
@@ -272,35 +447,26 @@ body {
   }
 }
 
-.cursor-shadow {
-  width: 20px;
-  height: 20px;
-  background-color: var(--primary-color);
-  border-radius: 50%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  z-index: 9997;
-  opacity: 0;
-}
-
-/* Instructions Box */
+/* ---------- Instructions box ---------- */
 .instructions-box {
-  background-color: #f8f9fa;
-  border-left: 5px solid #0056b3;
-  padding: 15px 20px;
-  margin: 20px auto;
+  background-color: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--border-hairline);
+  padding: 20px 24px;
+  margin: 8px auto;
   max-width: 500px;
   text-align: left;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 8px 24px -14px rgba(91, 110, 245, 0.35);
 }
 
 .instructions-box h3 {
   margin-top: 0;
-  font-size: 16px;
-  color: #333;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-color);
 }
 
 .instructions-box ol {
@@ -311,32 +477,48 @@ body {
 .instructions-box li {
   margin-bottom: 8px;
   font-size: 14px;
-  color: #444;
+  color: var(--text-muted);
 }
 
-/* Drag and Drop Zone */
+/* ---------- Drag and drop zone ---------- */
 .drop-zone {
-  border: 2px dashed #0056b3;
-  border-radius: 12px;
+  border: 1.5px dashed rgba(var(--glow-a), 0.45);
+  border-radius: var(--radius-md);
   padding: 40px 20px;
   max-width: 500px;
-  margin: 20px auto;
+  margin: 8px auto;
   text-align: center;
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.4);
   transition: all 0.2s ease-in-out;
 }
 
-/* This class gets added by JS when a file hovers over it */
 .drop-zone.dragover {
-  background-color: #e9f2ff;
-  border-color: #003d82;
-  transform: scale(1.02);
+  background-color: rgba(var(--glow-a), 0.08);
+  border-color: var(--primary-hover);
+  transform: scale(1.015);
+  box-shadow: 0 0 0 6px rgba(var(--glow-a), 0.08);
 }
 
 .or-text {
-  color: #888;
+  color: var(--text-muted);
   margin: 15px 0;
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 480px) {
+  .container {
+    padding: 32px 22px;
+  }
+  h1 {
+    font-size: 1.7rem;
+  }
+  h2 {
+    font-size: 1.35rem;
+  }
+  body {
+    font-size: 16px;
+  }
 }

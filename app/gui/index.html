@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <!-- NEW: ambient mesh background, purely decorative, sits behind everything -->
+    <div class="mesh-bg" aria-hidden="true">
+      <div class="blob blob-a"></div>
+      <div class="blob blob-b"></div>
+      <div class="blob blob-c"></div>
+    </div>
+
     <div class="cursor-dot" id="cursor-dot"></div>
     <div class="cursor-outline" id="cursor-outline"></div>
     <div id="cursor-shadow" class="cursor-shadow"></div>
@@ -63,11 +70,10 @@
           </div>
 
           <!-- File Selection -->
-          <div
-            id="drop-zone"
-            class="drop-zone"
-            style="border: none; background: transparent; cursor: default"
-          >
+          <!-- CHANGED: removed the inline style="border:none;background:transparent;cursor:default"
+               that was on this div — it was fighting the new drop-zone design and made it
+               invisible. .drop-zone now carries its own look via style.css. -->
+          <div id="drop-zone" class="drop-zone">
             <button id="select-file-btn" class="primary-btn">
               Browse for .zip File
             </button>
@@ -96,5 +102,7 @@
 
     <script src="js/bridge.js"></script>
     <script src="js/app.js"></script>
+    <!-- NEW: decorative-only, safe to remove independently of app logic -->
+    <script src="js/ambient.js"></script>
   </body>
 </html>

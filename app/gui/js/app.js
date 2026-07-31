@@ -19,9 +19,6 @@ function showScreen(screenToShow) {
 
   screenToShow.classList.remove("hidden");
   screenToShow.classList.add("active");
-
-  // Force the guide to instantly recalculate whenever the screen changes
-  setTimeout(updateGuide, 50);
 }
 
 /** Render the BubbleReport object into the results section. */
@@ -31,7 +28,6 @@ function renderReport(report) {
   const alts = report.suggested_alternatives ?? [];
   const meta = report.metadata ?? {};
 
-  // Determine dynamic colors based on the score
   const scoreColor =
     score > 60 ? "#c0392b" : score > 35 ? "#e67e22" : "#27ae60";
   const scoreBg = score > 60 ? "#fdf2f2" : score > 35 ? "#fff9f2" : "#f0fdf4";
@@ -43,7 +39,6 @@ function renderReport(report) {
     single_channel_dominance: "قناة واحدة تهيمن على مشاهداتك",
   };
 
-  // Modern UI blocks for flags
   const flagsHTML = flags.length
     ? `<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
         ${flags
@@ -59,7 +54,6 @@ function renderReport(report) {
          ✨ لم يتم رصد مؤشرات خطر واضحة. فقاعتك صحية!
        </div>`;
 
-  // Modern UI blocks for alternatives
   const altsHTML = alts.length
     ? `<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
         ${alts
@@ -79,31 +73,21 @@ function renderReport(report) {
        </div>`
     : "";
 
-  // Inject the final styled layout (Forcing RTL for Arabic)
   insightBox.innerHTML = `
     <div dir="rtl" style="text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-      
-      <!-- Big Score Card -->
       <div style="background: ${scoreBg}; border: 2px solid ${scoreColor}; border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 30px;">
         <h3 style="margin: 0 0 10px 0; color: #333; font-size: 20px;">درجة فقاعتك الخوارزمية</h3>
         <div style="direction: ltr; font-size: 48px; font-weight: 900; color: ${scoreColor}; display: inline-block;">
           ${score} <span style="font-size: 20px; color: #777; font-weight: 600;">/ 100</span>
         </div>
       </div>
-
-      <!-- Flags Section -->
       <h4 style="color: #222; margin-bottom: 5px; font-size: 18px;">مؤشرات التأثير:</h4>
       ${flagsHTML}
-
-      <!-- Alternatives Section -->
       ${altsHTML ? `<h4 style="color: #222; margin-top: 30px; margin-bottom: 5px; font-size: 18px;">بدائل مقترحة:</h4>${altsHTML}` : ""}
-
-      <!-- Footer Metadata -->
       <div style="margin-top: 35px; padding-top: 15px; border-top: 2px dashed #e1e4e8; text-align: center; font-size: 13px; color: #888;">
         📊 حُلِّل <strong>${meta.total_items ?? "?"}</strong> فيديو
         ${meta.sampled_for_ai ? `<br>(تم استخدام عيّنة من ${meta.sample_size} فيديو للذكاء الاصطناعي)` : ""}
       </div>
-
     </div>
   `;
 }
@@ -111,7 +95,6 @@ function renderReport(report) {
 // --- Button Click Handler ---
 selectFileBtn.addEventListener("click", async () => {
   try {
-    // Check if the bridge is loaded
     if (
       typeof window.pywebview === "undefined" ||
       typeof window.pywebview.api === "undefined"
@@ -119,30 +102,26 @@ selectFileBtn.addEventListener("click", async () => {
       throw new Error("PyWebView API is not loaded.");
     }
 
-    // Step 1: open the native file picker via the correct bridge path
     loadingStatus.textContent = "Opening file picker...";
     showScreen(loadingSection);
 
     const path = await window.pywebview.api.select_takeout_path();
 
     if (!path) {
-      // User cancelled the dialog — go back silently
       showScreen(uploadSection);
       return;
     }
 
-    // Step 2: run the full analysis pipeline via the correct bridge path
     loadingStatus.textContent =
       "Extracting and analyzing data... This may take a moment.";
 
-    // Force a tiny 150-millisecond pause so the browser has time to paint the loading text!
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     const response = await window.pywebview.api.run_analysis(path);
 
     if (response && response.success) {
       renderReport(response.report);
-      currentStep = 1;
+      currentStep = 1; // Advance the tutorial arrow!
       showScreen(resultsSection);
     } else {
       alert(response?.message || "Something went wrong.");
@@ -156,17 +135,11 @@ selectFileBtn.addEventListener("click", async () => {
 });
 
 startOverBtn.addEventListener("click", () => {
-  currentStep = 0;
+  currentStep = 0; // Reset the tutorial arrow!
   showScreen(uploadSection);
 });
 
-const cursorDot = document.getElementById("cursor-dot");
-const cursorOutline = document.getElementById("cursor-outline");
-const cursorShadow = document.getElementById("cursor-shadow");
-const guideOverlay = document.getElementById("guide-overlay");
-const guideTipBox = document.getElementById("guide-tip-box");
-const guidePath = document.getElementById("guide-path");
-
+// --- RESTORED & FIXED: Grandma-Friendly Tutorial Guide ---
 let currentStep = 0;
 const steps = [
   { target: "select-file-btn", message: "Tip: click here" },
@@ -176,8 +149,9 @@ const steps = [
   },
 ];
 
-let mouseX = window.innerWidth / 2;
-let mouseY = window.innerHeight / 2;
+const guideOverlay = document.getElementById("guide-overlay");
+const guideTipBox = document.getElementById("guide-tip-box");
+const guidePath = document.getElementById("guide-path");
 let shadowInterval;
 
 function updateGuide() {
@@ -185,40 +159,39 @@ function updateGuide() {
 
   if (currentStep >= steps.length) {
     guideOverlay.classList.add("hidden");
-    cursorShadow.style.opacity = "0";
+    if (document.getElementById("tutorial-shadow"))
+      document.getElementById("tutorial-shadow").style.opacity = "0";
     return;
   }
 
   const targetElement = document.getElementById(steps[currentStep].target);
 
-  // FIX: Added offsetHeight === 0 check to properly hide when the window is minimized
+  // FIXED: offsetHeight check prevents minimize bug
   if (
     !targetElement ||
     targetElement.closest(".screen.hidden") ||
-    targetElement.offsetWidth === 0 ||
     targetElement.offsetHeight === 0
   ) {
     guideOverlay.classList.add("hidden");
-    cursorShadow.style.opacity = "0";
+    if (document.getElementById("tutorial-shadow"))
+      document.getElementById("tutorial-shadow").style.opacity = "0";
     return;
   }
 
   guideOverlay.classList.remove("hidden");
   guideTipBox.textContent = steps[currentStep].message;
 
-  // getBoundingClientRect() is already relative to the viewport, which perfectly matches position: fixed!
+  // FIXED: No scrollX or scrollY so the tip anchors perfectly to the fixed window view
   const rect = targetElement.getBoundingClientRect();
 
-  // Shift the box further left for Step 1 because the text is wider
-  const leftOffset = currentStep === 1 ? 676 : 380;
-
+  // FIXED: Pushed leftOffset much further left (580) for the second screen
+  const leftOffset = currentStep === 1 ? 580 : 380;
   const tipX = Math.max(20, rect.left - leftOffset);
   const tipY = Math.max(20, rect.top - 100);
 
   guideTipBox.style.left = `${tipX}px`;
   guideTipBox.style.top = `${tipY}px`;
 
-  // Shift where the SVG arrow starts so it doesn't cross through the longer text
   const arrowStartOffset = currentStep === 1 ? 220 : 90;
   const startX = tipX + arrowStartOffset;
   const startY = tipY + 65;
@@ -233,64 +206,57 @@ function updateGuide() {
     `M ${startX} ${startY} Q ${cpX} ${cpY} ${endX} ${endY}`,
   );
 
+  // FIXED: Generate a dedicated tutorial shadow so it doesn't fight Claude's script
+  let tutShadow = document.getElementById("tutorial-shadow");
+  if (!tutShadow) {
+    tutShadow = document.createElement("div");
+    tutShadow.id = "tutorial-shadow";
+    tutShadow.style.cssText =
+      "position:fixed; top:0; left:0; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle, rgba(91, 110, 245, 0.4), transparent 70%); filter:blur(4px); pointer-events:none; z-index:9996; opacity:0;";
+    document.body.appendChild(tutShadow);
+  }
+
+  // Re-enable the pulsing cursor shadow over the target button
   shadowInterval = setInterval(() => {
     const targetX = rect.left + rect.width / 2;
     const targetY = rect.top + rect.height / 2;
 
-    cursorShadow.animate(
+    // Get the current mouse position from Claude's ambient dot to start the animation
+    const dot = document.getElementById("cursor-dot");
+    let startMouseX = targetX;
+    let startMouseY = targetY;
+
+    if (dot && dot.style.left) {
+      startMouseX = parseFloat(dot.style.left);
+      startMouseY = parseFloat(dot.style.top);
+    }
+
+    tutShadow.animate(
       [
         {
-          transform: `translate(${mouseX - 10}px, ${mouseY - 10}px) scale(1)`,
+          transform: `translate(${startMouseX - 60}px, ${startMouseY - 60}px) scale(0.5)`,
           opacity: 0,
         },
         {
-          transform: `translate(${mouseX - 10}px, ${mouseY - 10}px) scale(1)`,
+          transform: `translate(${startMouseX - 60}px, ${startMouseY - 60}px) scale(0.5)`,
           opacity: 0.6,
           offset: 0.1,
         },
         {
-          transform: `translate(${targetX - 10}px, ${targetY - 10}px) scale(2)`,
+          transform: `translate(${targetX - 60}px, ${targetY - 60}px) scale(1.5)`,
           opacity: 0,
           offset: 1,
         },
       ],
-      {
-        duration: 1500,
-        easing: "cubic-bezier(0.25, 1, 0.5, 1)",
-      },
+      { duration: 1500, easing: "cubic-bezier(0.25, 1, 0.5, 1)" },
     );
   }, 2000);
 }
 
-// NEW: Tells the browser to instantly recalculate the arrow position if the user scrolls or resizes/minimizes the window!
 window.addEventListener("scroll", updateGuide);
 window.addEventListener("resize", updateGuide);
 
-window.addEventListener("mousemove", function (e) {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
-
-  cursorDot.style.left = `${mouseX}px`;
-  cursorDot.style.top = `${mouseY}px`;
-
-  cursorOutline.animate(
-    {
-      left: `${mouseX}px`,
-      top: `${mouseY}px`,
-    },
-    { duration: 500, fill: "forwards" },
-  );
-});
-
-document.querySelectorAll("button").forEach((button) => {
-  button.addEventListener("mouseenter", () => {
-    document.body.classList.add("cursor-hover");
-  });
-  button.addEventListener("mouseleave", () => {
-    document.body.classList.remove("cursor-hover");
-  });
-});
-
+// Hook into showScreen so the guide recalculates perfectly when switching screens
 let originalShowScreen =
   typeof showScreen !== "undefined" ? showScreen : function () {};
 showScreen = function (screenToShow) {
@@ -298,4 +264,5 @@ showScreen = function (screenToShow) {
   setTimeout(updateGuide, 100);
 };
 
+// Initialize the guide on load
 updateGuide();
