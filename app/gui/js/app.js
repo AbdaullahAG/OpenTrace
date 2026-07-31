@@ -75,15 +75,22 @@ function renderReport(report) {
 
   insightBox.innerHTML = `
     <div dir="rtl" style="text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-      <div style="background: var(--report-card-bg, ${scoreBg}); border: 2px solid ${scoreColor}; border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 30px;">
-        <h3 style="margin: 0 0 10px 0; color: var(--report-text-main, #333); font-size: 20px;">درجة فقاعتك الخوارزمية</h3>
-        <div style="direction: ltr; font-size: 48px; font-weight: 900; color: ${scoreColor}; display: inline-block;">
-          ${score} <span style="font-size: 20px; color: var(--report-text-muted, #777); font-weight: 600;">/ 100</span>
+      
+      <!-- New Bubble Score Container -->
+      <h3 style="margin: 0 0 20px 0; color: var(--report-text-main, #333); font-size: 20px; text-align: center;">درجة فقاعتك الخوارزمية</h3>
+      <div style="display: flex; justify-content: center; margin-bottom: 35px;">
+        <div style="background: var(--report-card-bg, rgba(255, 255, 255, 0.15)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 2px solid ${scoreColor}; border-radius: 50%; width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; flex-direction: column; box-shadow: inset 0 4px 20px rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.05);">
+          <div style="direction: ltr; font-size: 52px; font-weight: 900; color: ${scoreColor}; line-height: 1;">
+            ${score}
+          </div>
+          <div style="font-size: 18px; color: var(--report-text-muted, #777); font-weight: 600; margin-top: 8px;">/ 100</div>
         </div>
       </div>
+
       <h4 style="color: var(--report-text-main, #222); margin-bottom: 5px; font-size: 18px;">مؤشرات التأثير:</h4>
       ${flagsHTML}
       ${altsHTML ? `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 5px; font-size: 18px;">بدائل مقترحة:</h4>${altsHTML}` : ""}
+      
       <div style="margin-top: 35px; padding-top: 15px; border-top: 2px dashed rgba(128,128,128,0.3); text-align: center; font-size: 13px; color: var(--report-text-muted, #888);">
         📊 حُلِّل <strong>${meta.total_items ?? "?"}</strong> فيديو
         ${meta.sampled_for_ai ? `<br>(تم استخدام عيّنة من ${meta.sample_size} فيديو للذكاء الاصطناعي)` : ""}
