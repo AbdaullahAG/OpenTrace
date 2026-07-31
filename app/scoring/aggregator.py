@@ -24,7 +24,7 @@ import sys
 from datetime import datetime
 
 from app.constants import SCORE_WEIGHTS
-from app.llm.classifier import ClassificationResult, classify_topics
+from app.llm.classifier import classify_topics
 from app.llm.ollama_client import OllamaClient, OllamaError
 from app.scoring.alternatives import suggest_alternatives
 from app.scoring.concentration import calculate_concentration, topic_distribution
@@ -137,37 +137,20 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
     return report
 
 
-def _attach_topics(items: list[dict], client: OllamaClient) -> tuple[list[dict], ClassificationResult]:
-    """Classify and attach a ``"topic"`` to each item that has a title.
-
-    Passes the parallel ``channels`` list to ``classify_topics`` so the
-    channel cache can skip repeated LLM calls for the same channel.
-    Items without a title are left untouched (concentration.py already
-    skips them).
-
-    Returns the updated items alongside the ``ClassificationResult`` so
-    the caller can surface honest stats (cache hits, retries exhausted,
-    items dropped by the deadline) instead of hiding them.
-    """
+def _attach_topics(items: list[dict], client: OllamaClient) -> tuple[list[dict], None]:
+    """Classify and attach a ``"topic"`` to each item that has a title."""
     titled_indices = [i for i, item in enumerate(items) if item.get("title")]
     titles   = [items[i]["title"]   for i in titled_indices]
     channels = [items[i].get("channel", "") for i in titled_indices]
 
-    result = classify_topics(client, titles, channels=channels)
-
-    if result.deadline_dropped or result.failed:
-        print(
-            f"ℹ️  aggregator: classification finished in {result.elapsed_seconds}s — "
-            f"{result.llm_classified} classified, {result.cache_hits} from cache, "
-            f"{result.failed} failed after retries, {result.deadline_dropped} dropped by deadline.",
-            file=sys.stderr,
-        )
+    # classify_topics بترجع قائمة نصوص مباشرة
+    labels = classify_topics(client, titles, channels=channels)
 
     updated = list(items)
-    for index, label in zip(titled_indices, result.labels):
+    for index, label in zip(titled_indices, labels):
         updated[index] = {**updated[index], "topic": label}
-    return updated, result
 
+    return updated, None
 
 def _manipulation_weight(items: list[dict]) -> float:
     channels = top_channels(items, limit=1)
