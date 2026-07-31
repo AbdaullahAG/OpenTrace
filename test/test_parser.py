@@ -1,10 +1,33 @@
-import sys
+"""Manual diagnostic script for the ingestion/parsing pipeline.
+
+Not an automated test (see tests/ for those) — this is a developer
+tool for eyeballing what a real Takeout export parses into.
+
+Usage:
+    python test_parser.py /path/to/takeout.zip
+    # or set TAKEOUT_PATH in the environment / .env file
+"""
+
 import json
+import os
+import sys
 from pathlib import Path
 
-TAKEOUT_PATH = r"C:\Users\ONE BY ONE\Downloads\takeout-20260720T223745Z-1-001.zip"
-
 from app.ingestion.dispatcher import Dispatcher
+
+
+def _resolve_path() -> Path:
+    """Path comes from a CLI arg or TAKEOUT_PATH env var — never
+    hardcoded, so this script is portable across machines and safe to
+    keep in version control without leaking anyone's local filesystem
+    layout.
+    """
+    raw = sys.argv[1] if len(sys.argv) > 1 else os.getenv("TAKEOUT_PATH")
+    if not raw:
+        print("Usage: python test_parser.py /path/to/takeout.zip")
+        print("       (or set the TAKEOUT_PATH environment variable)")
+        sys.exit(2)
+    return Path(raw)
 
 
 def main():
@@ -12,23 +35,26 @@ def main():
     print("اختبار OpenTrace Parser")
     print("=" * 50)
 
-    path = Path(TAKEOUT_PATH)
+    path = _resolve_path()
     if not path.exists():
-        print(f"[خطأ] المسار غير موجود: {TAKEOUT_PATH}")
+        print(f"[خطأ] المسار غير موجود: {path}")
         sys.exit(1)
 
-    print(f"\nالمسار: {TAKEOUT_PATH}")
+    print(f"\nالمسار: {path}")
     print("جاري التحليل...\n")
 
+    dispatcher = Dispatcher()
     try:
-        dataset = Dispatcher().run(TAKEOUT_PATH)
-    except FileNotFoundError as e:
-        print(f"[خطأ] {e}")
-        sys.exit(1)
+        result = dispatcher.parse(str(path))
     except Exception as e:
         print(f"[خطأ غير متوقع] {e}")
         raise
 
+    if not result.get("success"):
+        print(f"[خطأ] {result.get('message')}")
+        sys.exit(1)
+
+    dataset = dispatcher._cached_dataset  # same object the real app uses in phase 2
     subscribed     = [v for v in dataset.watched_items if v.is_subscribed]
     not_subscribed = [v for v in dataset.watched_items if not v.is_subscribed]
     shorts         = [v for v in dataset.watched_items if v.is_short]
