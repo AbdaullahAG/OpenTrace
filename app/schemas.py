@@ -11,7 +11,7 @@ but they're the single source of truth other modules should follow:
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class FeedItem(TypedDict, total=False):
@@ -30,6 +30,12 @@ class ReportMetadata(TypedDict):
     analysis_period_days: int
     exposure_total: int
     exposure_unsubscribed: int
+    # Only present when ai_available is True — honest bookkeeping so the
+    # UI can distinguish "the model said other" from "we gave up".
+    classification_llm_calls_cached: NotRequired[int]
+    classification_deadline_dropped: NotRequired[int]
+    classification_failed: NotRequired[int]
+    classification_elapsed_seconds: NotRequired[float]
 
 
 class BubbleReport(TypedDict):
