@@ -4,10 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OpenTrace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400..700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <!-- NEW: ambient mesh background, purely decorative, sits behind everything -->
+    <button id="theme-toggle" class="theme-btn">🌙 Dark Mode</button>
+    <!-- Ambient mesh background, purely decorative, sits behind everything -->
     <div class="mesh-bg" aria-hidden="true">
       <div class="blob blob-a"></div>
       <div class="blob blob-b"></div>
@@ -69,8 +76,13 @@
             </ol>
           </div>
 
+          <div class="gif-frame">
+            <span class="gif-placeholder-text">Your Upload GIF goes here</span>
+            <!-- <img src="assets/upload-tutorial.gif" alt="Upload Tutorial" /> -->
+          </div>
+
           <!-- File Selection -->
-          <!-- CHANGED: removed the inline style="border:none;background:transparent;cursor:default"
+          <!-- Removed the inline style="border:none;background:transparent;cursor:default"
                that was on this div — it was fighting the new drop-zone design and made it
                invisible. .drop-zone now carries its own look via style.css. -->
           <div id="drop-zone" class="drop-zone">
@@ -95,6 +107,10 @@
       <div id="results-section" class="screen hidden">
         <h2>Your Algorithm Summary</h2>
         <div id="llm-insight-box" class="insight-box"></div>
+
+        <div class="gif-frame">
+          <span class="gif-placeholder-text">Your Results GIF goes here</span>
+        </div>
 
         <button id="start-over-btn" class="secondary-btn">Start Over</button>
       </div>

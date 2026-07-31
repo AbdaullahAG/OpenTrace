@@ -44,13 +44,13 @@ function renderReport(report) {
         ${flags
           .map(
             (f) => `
-          <div style="background: #f8f9fa; border-right: 4px solid #c0392b; padding: 12px 15px; border-radius: 8px; font-weight: 500; color: #333;">
+          <div style="background: var(--report-alt-bg, #f8f9fa); border-right: 4px solid #c0392b; padding: 12px 15px; border-radius: 8px; font-weight: 500; color: var(--report-text-main, #333);">
             🚨 ${flagLabels[f] || f}
           </div>`,
           )
           .join("")}
        </div>`
-    : `<div style="background: #f0fdf4; padding: 12px; border-radius: 8px; color: #27ae60; font-weight: 500;">
+    : `<div style="background: var(--report-alt-bg, #f0fdf4); padding: 12px; border-radius: 8px; color: #27ae60; font-weight: 500;">
          ✨ لم يتم رصد مؤشرات خطر واضحة. فقاعتك صحية!
        </div>`;
 
@@ -59,12 +59,12 @@ function renderReport(report) {
         ${alts
           .map(
             (a) => `
-          <div style="background: #f4f7f9; border-right: 4px solid #0056b3; padding: 15px; border-radius: 8px;">
-            <a href="${a.url}" target="_blank" style="text-decoration: none; color: #0056b3; font-weight: bold; font-size: 16px;">
+          <div style="background: var(--report-alt-bg, #f4f7f9); border-right: 4px solid #0056b3; padding: 15px; border-radius: 8px;">
+            <a href="${a.url}" target="_blank" style="text-decoration: none; color: var(--report-link, #0056b3); font-weight: bold; font-size: 16px;">
               🔗 ${a.name}
             </a>
-            <p style="margin: 8px 0 0 0; color: #444; line-height: 1.5;">${a.description}</p>
-            <small style="color: #666; display: block; margin-top: 8px; background: #e9ecef; padding: 6px; border-radius: 4px;">
+            <p style="margin: 8px 0 0 0; color: var(--report-text-main, #444); line-height: 1.5;">${a.description}</p>
+            <small style="color: var(--report-text-muted, #666); display: block; margin-top: 8px; background: var(--report-small-bg, #e9ecef); padding: 6px; border-radius: 4px;">
               💡 <strong>لماذا؟</strong> ${a.reason}
             </small>
           </div>`,
@@ -75,16 +75,16 @@ function renderReport(report) {
 
   insightBox.innerHTML = `
     <div dir="rtl" style="text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-      <div style="background: ${scoreBg}; border: 2px solid ${scoreColor}; border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 30px;">
-        <h3 style="margin: 0 0 10px 0; color: #333; font-size: 20px;">درجة فقاعتك الخوارزمية</h3>
+      <div style="background: var(--report-card-bg, ${scoreBg}); border: 2px solid ${scoreColor}; border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 10px 0; color: var(--report-text-main, #333); font-size: 20px;">درجة فقاعتك الخوارزمية</h3>
         <div style="direction: ltr; font-size: 48px; font-weight: 900; color: ${scoreColor}; display: inline-block;">
-          ${score} <span style="font-size: 20px; color: #777; font-weight: 600;">/ 100</span>
+          ${score} <span style="font-size: 20px; color: var(--report-text-muted, #777); font-weight: 600;">/ 100</span>
         </div>
       </div>
-      <h4 style="color: #222; margin-bottom: 5px; font-size: 18px;">مؤشرات التأثير:</h4>
+      <h4 style="color: var(--report-text-main, #222); margin-bottom: 5px; font-size: 18px;">مؤشرات التأثير:</h4>
       ${flagsHTML}
-      ${altsHTML ? `<h4 style="color: #222; margin-top: 30px; margin-bottom: 5px; font-size: 18px;">بدائل مقترحة:</h4>${altsHTML}` : ""}
-      <div style="margin-top: 35px; padding-top: 15px; border-top: 2px dashed #e1e4e8; text-align: center; font-size: 13px; color: #888;">
+      ${altsHTML ? `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 5px; font-size: 18px;">بدائل مقترحة:</h4>${altsHTML}` : ""}
+      <div style="margin-top: 35px; padding-top: 15px; border-top: 2px dashed rgba(128,128,128,0.3); text-align: center; font-size: 13px; color: var(--report-text-muted, #888);">
         📊 حُلِّل <strong>${meta.total_items ?? "?"}</strong> فيديو
         ${meta.sampled_for_ai ? `<br>(تم استخدام عيّنة من ${meta.sample_size} فيديو للذكاء الاصطناعي)` : ""}
       </div>
@@ -266,3 +266,17 @@ showScreen = function (screenToShow) {
 
 // Initialize the guide on load
 updateGuide();
+
+// --- Dark Mode Toggle ---
+const themeToggle = document.getElementById("theme-toggle");
+
+themeToggle.addEventListener("click", () => {
+  document.body.classList.toggle("dark-theme");
+
+  // Change the button text based on the current theme
+  if (document.body.classList.contains("dark-theme")) {
+    themeToggle.textContent = "☀️ Light Mode";
+  } else {
+    themeToggle.textContent = "🌙 Dark Mode";
+  }
+});
