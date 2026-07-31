@@ -38,6 +38,16 @@ function renderReport(report) {
   const alts = report.suggested_alternatives ?? [];
   const meta = report.metadata ?? {};
 
+  // حساب الأرقام الدقيقة للوحة الإحصائيات[cite: 5]
+  const totalWatched = meta.exposure_total || meta.total_items || 0;
+  const exposureUnsub = meta.exposure_unsubscribed || 0;
+  const exposureSub = totalWatched > 0 ? totalWatched - exposureUnsub : 0;
+  const unsubPercentage =
+    totalWatched > 0 ? Math.round((exposureUnsub / totalWatched) * 100) : 0;
+  const uniqueChannels = meta.unique_channels || 0;
+  const analysisDays = meta.analysis_period_days || 0;
+
+  // تجهيز التصنيفات وتحديد المهيمن منها[cite: 5]
   const topics = report.topic_distribution || {};
   const topicLabels = {
     politics: "سياسة",
@@ -49,12 +59,62 @@ function renderReport(report) {
     music: "موسيقى",
     gaming: "ألعاب",
     religion: "دين",
+    software_engineering: "هندسة برمجيات",
+    combat_fitness: "رياضات قتالية ولياقة",
+    literature_philosophy: "أدب وفلسفة",
+    board_games: "ألعاب استراتيجية",
+    language_learning: "تعلم اللغات",
     other: "أخرى",
   };
+
   const topicsSorted = Object.entries(topics).sort((a, b) => b[1] - a[1]);
+
+  // بناء قسم الهيمنة المباشر
+  let dominantHTML = "";
+  if (topicsSorted.length > 0 && totalWatched > 0) {
+    let dominantTopic = topicsSorted[0][0];
+    let dominantCount = topicsSorted[0][1];
+
+    if (dominantTopic === "other" && topicsSorted.length > 1) {
+      dominantTopic = topicsSorted[1][0];
+      dominantCount = topicsSorted[1][1];
+    }
+
+    const percentage = Math.round((dominantCount / totalWatched) * 100);
+    const topicName = topicLabels[dominantTopic] || dominantTopic;
+
+    dominantHTML = `
+      <div style="background: var(--report-alt-bg, #fdf2f2); color: #c0392b; padding: 15px; border-radius: 8px; border-right: 5px solid #c0392b; margin-bottom: 25px; font-size: 16px; text-align: right;">
+        <strong>هيمنة المحتوى:</strong> محتواك يتمركز حول (<strong>${topicName}</strong>) بنسبة ${percentage}% من إجمالي ${totalWatched} فيديو شاهدتها خلال ${analysisDays} يوما.
+      </div>
+    `;
+  }
+
+  // بناء شبكة الإحصائيات (Stats Grid)[cite: 5]
+  const statsGridHTML = `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 30px; text-align: center;">
+      <div style="background: var(--report-alt-bg, #f8f9fa); padding: 15px; border-radius: 8px; border: 1px solid var(--report-border, #ddd);">
+        <div style="font-size: 24px; font-weight: bold; color: var(--report-text-main, #2c3e50);">${totalWatched}</div>
+        <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">إجمالي المشاهدات</div>
+      </div>
+      <div style="background: var(--report-alt-bg, #f8f9fa); padding: 15px; border-radius: 8px; border: 1px solid var(--report-border, #ddd);">
+        <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">${unsubPercentage}%</div>
+        <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">خارج اشتراكاتك</div>
+      </div>
+      <div style="background: var(--report-alt-bg, #f8f9fa); padding: 15px; border-radius: 8px; border: 1px solid var(--report-border, #ddd);">
+        <div style="font-size: 24px; font-weight: bold; color: #27ae60;">${exposureSub}</div>
+        <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">من اشتراكاتك</div>
+      </div>
+      <div style="background: var(--report-alt-bg, #f8f9fa); padding: 15px; border-radius: 8px; border: 1px solid var(--report-border, #ddd);">
+        <div style="font-size: 24px; font-weight: bold; color: #8e44ad;">${uniqueChannels}</div>
+        <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">قناة فريدة</div>
+      </div>
+    </div>
+  `;
+
   let topicsHTML = "";
   if (topicsSorted.length > 0) {
-    topicsHTML = `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 10px; font-size: 18px;">أبرز التصنيفات التي شاهدتها:</h4>
+    topicsHTML = `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 10px; font-size: 18px;">التوزيع الكمي للتصنيفات:</h4>
     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px;">
       ${topicsSorted
         .map(
@@ -93,47 +153,30 @@ function renderReport(report) {
 
   let scoreDescription = "";
   if (score <= 35) {
-    scoreDescription = "فقاعتك صحية! أنت تشاهد محتوى متنوعاً ومن مصادر مختلفة.";
+    scoreDescription = "فقاعتك صحية. أنت تشاهد محتوى متنوعا ومن مصادر مختلفة.";
   } else if (score <= 60) {
     scoreDescription =
       "فقاعتك متوسطة. خوارزميات التوصية بدأت تحصرك في مسارات ومواضيع محددة.";
   } else {
     scoreDescription =
-      "فقاعتك شديدة الانغلاق! الخوارزمية تتحكم بما تراه بشكل كبير وأنت تدور في نفس الدوامة.";
-  }
-
-  let topTopicMsg = "";
-  const totalTopicCount = Object.values(topics).reduce((a, b) => a + b, 0);
-  if (topicsSorted.length > 0 && totalTopicCount > 0) {
-    const topTopic = topicsSorted[0][0];
-    let dominantTopic = topTopic;
-    let dominantCount = topicsSorted[0][1];
-
-    if (topTopic === "other" && topicsSorted.length > 1) {
-      dominantTopic = topicsSorted[1][0];
-      dominantCount = topicsSorted[1][1];
-    }
-
-    const percentage = Math.round((dominantCount / totalTopicCount) * 100);
-    const topicName = topicLabels[dominantTopic] || dominantTopic;
-
-    topTopicMsg = `محتواك يتمركز حول (<strong>${topicName}</strong>) بنسبة ${percentage}%.`;
+      "فقاعتك شديدة الانغلاق. الخوارزمية تتحكم بما تراه بشكل كبير وأنت تدور في نفس الدوامة.";
   }
 
   const scoreExplanationHTML = `
     <div style="text-align: center; margin-top: -5px; margin-bottom: 35px; color: var(--report-text-main, #555); font-size: 15px; line-height: 1.5; padding: 0 20px;">
       <p style="margin: 0 0 5px 0;"><strong>ماذا يعني هذا الرقم؟</strong></p>
       <p style="margin: 0;">يقيس هذا الرقم مدى انغلاقك داخل فقاعة خوارزمية. 
-      <br><span style="color: ${scoreColor}; font-weight: bold;">${scoreDescription}</span>
-      <br><span style="color: var(--report-text-main, #444); margin-top: 5px; display: inline-block;">${topTopicMsg}</span></p>
+      <br><span style="color: ${scoreColor}; font-weight: bold;">${scoreDescription}</span></p>
     </div>
   `;
 
+  // ربط الأعلام بالبيانات الرقمية الصريحة[cite: 5]
   const flagLabels = {
-    low_source_diversity: "مصادرك محدودة جداً",
-    high_topic_concentration: "محتواك متركّز حول موضوع واحد",
-    high_algorithmic_exposure: `معظم ما تشاهده من قنوات لم تشترك بها<br><span style="font-size: 13px; font-weight: normal; color: var(--report-text-muted, #666); margin-top: 4px; display: inline-block;">شاهدت ${meta.exposure_unsubscribed || 0} فيديو من قنوات لم تشترك بها مقابل ${(meta.exposure_total || 0) - (meta.exposure_unsubscribed || 0)} من اشتراكاتك الفعلية.</span>`,
-    single_channel_dominance: "قناة واحدة تهيمن على مشاهداتك",
+    low_source_diversity: "مصادرك محدودة جدا ولا تعتمد على تنوع القنوات.",
+    high_topic_concentration:
+      "محتواك متركز حول موضوع واحد يسيطر على اقتراحاتك.",
+    high_algorithmic_exposure: `سيطرة خوارزمية: شاهدت <strong>${exposureUnsub}</strong> فيديو من قنوات لم تشترك بها، مقابل <strong>${exposureSub}</strong> فيديو فقط من اشتراكاتك الفعلية.`,
+    single_channel_dominance: "قناة واحدة تهيمن على مشاهداتك بالكامل.",
   };
 
   const flagsHTML = flags.length
@@ -141,14 +184,14 @@ function renderReport(report) {
         ${flags
           .map(
             (f) => `
-          <div style="background: var(--report-alt-bg, #f8f9fa); border-right: 4px solid #c0392b; padding: 12px 15px; border-radius: 8px; font-weight: 500; color: var(--report-text-main, #333);">
+          <div style="background: var(--report-alt-bg, #f8f9fa); border-right: 4px solid #c0392b; padding: 12px 15px; border-radius: 8px; font-weight: 500; color: var(--report-text-main, #333); font-size: 15px;">
             🚨 ${flagLabels[f] || f}
           </div>`,
           )
           .join("")}
        </div>`
     : `<div style="background: var(--report-alt-bg, #f0fdf4); padding: 12px; border-radius: 8px; color: #27ae60; font-weight: 500;">
-         ✨ لم يتم رصد مؤشرات خطر واضحة. فقاعتك صحية!
+         ✨ لم يتم رصد مؤشرات خطر واضحة. فقاعتك صحية.
        </div>`;
 
   const altsHTML = alts.length
@@ -183,16 +226,17 @@ function renderReport(report) {
       </div>
       
       ${scoreExplanationHTML}
-      <h4 style="color: var(--report-text-main, #222); margin-bottom: 5px; font-size: 18px;">مؤشرات التأثير:</h4>
+      
+      ${dominantHTML}
+
+      <h4 style="color: var(--report-text-main, #222); margin-bottom: 15px; font-size: 18px;">تفاصيل الأرقام:</h4>
+      ${statsGridHTML}
+
+      <h4 style="color: var(--report-text-main, #222); margin-bottom: 5px; font-size: 18px;">الأدلة ومؤشرات التأثير:</h4>
       ${flagsHTML}
       ${topicsHTML}
       ${channelsHTML}
-      ${altsHTML ? `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 5px; font-size: 18px;">بدائل مقترحة:</h4>${altsHTML}` : ""}
-      
-      <div style="margin-top: 35px; padding-top: 15px; border-top: 2px dashed rgba(128,128,128,0.3); text-align: center; font-size: 13px; color: var(--report-text-muted, #888);">
-        📊 التحليل مبني على <strong>${meta.total_items ?? "?"} فيديو</strong> خلال <strong>${meta.analysis_period_days ?? "?"} يوماً</strong>.
-        ${meta.sampled_for_ai ? `<br><span style="font-size: 11px;">(تم أخذ عيّنة تمثيلية بـ ${meta.sample_size} فيديو لتحليل الذكاء الاصطناعي)</span>` : ""}
-      </div>
+      ${altsHTML ? `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 5px; font-size: 18px;">بدائل مقترحة لكسر الفقاعة:</h4>${altsHTML}` : ""}
     </div>
   `;
 }
