@@ -40,23 +40,50 @@ class OllamaClient:
         except requests.exceptions.RequestException:
             return False
 
-    def generate(self, prompt: str, *, temperature: float = 0.2, timeout: float = _DEFAULT_GENERATE_TIMEOUT) -> str:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        temperature: float = 0.2,
+        timeout: float = _DEFAULT_GENERATE_TIMEOUT,
+        json_mode: bool = False,
+        max_tokens: int | None = None,
+    ) -> str:
         """Send a prompt, return the raw text response.
 
         Raises OllamaError on connection failure or timeout so callers
         can decide how to degrade gracefully instead of the app crashing.
         `timeout` is overridable per-call — a batch of 10 complex titles
         on CPU-only inference needs more room than a one-line prompt.
+
+        `json_mode` sets Ollama's ``format: "json"`` constrained-decoding
+        option, which makes the model emit syntactically valid JSON
+        instead of merely being *asked* to. This measurably cuts down
+        on unparseable responses from small local models and is the
+        preferred way to get structured output instead of trusting a
+        prompt instruction alone.
+
+        `max_tokens` caps ``num_predict`` — without a cap a rambling
+        response can eat most of the per-call timeout on CPU-only
+        inference before ever finishing.
         """
+        options: dict = {"temperature": temperature}
+        if max_tokens is not None:
+            options["num_predict"] = max_tokens
+
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": options,
+        }
+        if json_mode:
+            payload["format"] = "json"
+
         try:
             response = requests.post(
                 f"{self.host}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": temperature},
-                },
+                json=payload,
                 timeout=timeout,
             )
             response.raise_for_status()
