@@ -6,6 +6,7 @@ import webview
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+from app.config import get_settings
 from app.ingestion.dispatcher import Dispatcher
 
 
@@ -90,7 +91,10 @@ def start():
         width=1200,
         height=800,
     )
-    webview.start(debug=True)
+    # Devtools/debug console should only be on for local development —
+    # leaving it on unconditionally exposes the DOM/JS console (and thus
+    # window.pywebview.api) in a shipped build.
+    webview.start(debug=get_settings().debug)
 
 
 if __name__ == "__main__":
