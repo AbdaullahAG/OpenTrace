@@ -13,6 +13,47 @@ const insightBox = document.getElementById("llm-insight-box");
 
 let selectedFilePath = "";
 
+// ── Output-encoding helpers (OWASP A03:2021 — Injection) ──────────────
+//
+// Channel names and titles come from the user's Google Takeout export.
+// That file can be edited, shared, or (in principle) crafted, so it is
+// untrusted input as far as the renderer is concerned. Every dynamic
+// value gets escaped before it is interpolated into an innerHTML
+// template — never trust data just because "it's the user's own file".
+function escapeHTML(value) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return text.replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return ch;
+    }
+  });
+}
+
+// Only allow http(s) URLs in href attributes — blocks `javascript:`,
+// `data:`, and similar schemes that could execute script on click.
+function sanitizeUrl(url) {
+  try {
+    const parsed = new URL(String(url), window.location.href);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.href;
+    }
+  } catch (_) {
+    // fall through to safe default
+  }
+  return "#";
+}
+
 function showScreen(screenToShow) {
   uploadSection.classList.remove("active");
   uploadSection.classList.add("hidden");
@@ -125,18 +166,33 @@ function renderReport(report) {
     const topicsSampleNote = wasSampled
       ? ` <span style="font-size:13px;font-weight:normal;color:var(--report-text-muted,#7f8c8d);">(عيّنة ${classifiedTotal} من ${totalWatched})</span>`
       : "";
+
+    // Be honest with the person: distinguish "the model looked and said
+    // other" from "we ran out of time / retries and gave up" instead of
+    // silently blending both into the same "other" bucket with no context.
+    const deadlineDropped = meta.classification_deadline_dropped || 0;
+    const classificationFailed = meta.classification_failed || 0;
+    const unresolvedCount = deadlineDropped + classificationFailed;
+    const unresolvedNote =
+      unresolvedCount > 0
+        ? `<p style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin: 6px 0 0 0;">
+             ⏱️ ${escapeHTML(unresolvedCount)} من العناصر لم يتم تصنيفها بنجاح (انتهاء الوقت المخصص أو تعذّر الاتصال بالنموذج المحلي) وتم وضعها ضمن "أخرى" بدلاً من تصنيف فعلي.
+           </p>`
+        : "";
+
     topicsHTML = `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 10px; font-size: 18px;">التوزيع الكمي للتصنيفات:${topicsSampleNote}</h4>
     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px;">
       ${topicsSorted
         .map(
           ([topic, count]) => `
         <div style="background: var(--report-alt-bg, #f0f4f8); padding: 8px 12px; border-radius: 20px; font-size: 14px; border: 1px solid var(--report-border, #ddd); color: var(--report-text-main, #333);">
-          <strong>${topicLabels[topic] || topic}</strong>: ${count}
+          <strong>${escapeHTML(topicLabels[topic] || topic)}</strong>: ${escapeHTML(count)}
         </div>
       `,
         )
         .join("")}
-    </div>`;
+    </div>
+    ${unresolvedNote}`;
   }
 
   const channels = report.top_channels || [];
@@ -149,8 +205,8 @@ function renderReport(report) {
           .map(
             (c) => `
           <li style="background: var(--report-alt-bg, #f8f9fa); padding: 10px 15px; border-radius: 8px; border-right: 4px solid #3498db; display: flex; justify-content: space-between; align-items: center; color: var(--report-text-main, #333);">
-            <span style="font-weight: 500; word-break: break-word;">${c.name}</span>
-            <span style="background: var(--report-small-bg, #e9ecef); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: var(--report-text-muted, #555); white-space: nowrap;">${c.count} مشاهدة</span>
+            <span style="font-weight: 500; word-break: break-word;">${escapeHTML(c.name)}</span>
+            <span style="background: var(--report-small-bg, #e9ecef); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: var(--report-text-muted, #555); white-space: nowrap;">${escapeHTML(c.count)} مشاهدة</span>
           </li>
         `,
           )
@@ -211,12 +267,12 @@ function renderReport(report) {
           .map(
             (a) => `
           <div style="background: var(--report-alt-bg, #f4f7f9); border-right: 4px solid #0056b3; padding: 15px; border-radius: 8px;">
-            <a href="${a.url}" target="_blank" style="text-decoration: none; color: var(--report-link, #0056b3); font-weight: bold; font-size: 16px;">
-              🔗 ${a.name}
+            <a href="${sanitizeUrl(a.url)}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: var(--report-link, #0056b3); font-weight: bold; font-size: 16px;">
+              🔗 ${escapeHTML(a.name)}
             </a>
-            <p style="margin: 8px 0 0 0; color: var(--report-text-main, #444); line-height: 1.5;">${a.description}</p>
+            <p style="margin: 8px 0 0 0; color: var(--report-text-main, #444); line-height: 1.5;">${escapeHTML(a.description)}</p>
             <small style="color: var(--report-text-muted, #666); display: block; margin-top: 8px; background: var(--report-small-bg, #e9ecef); padding: 6px; border-radius: 4px;">
-              💡 <strong>لماذا؟</strong> ${a.reason}
+              💡 <strong>لماذا؟</strong> ${escapeHTML(a.reason)}
             </small>
           </div>`,
           )
@@ -274,9 +330,9 @@ selectFileBtn.addEventListener("click", async () => {
 
     if (response && response.success) {
       metadataList.innerHTML = `
-        <li style="margin-bottom: 10px;">📊 إجمالي الفيديوهات المقروءة: <strong>${response.stats.total_watched}</strong></li>
-        <li style="margin-bottom: 10px;">📅 فترة التحليل: <strong>${response.stats.analysis_period_days} يوماً</strong></li>
-        <li style="margin-bottom: 10px;">🔔 إجمالي القنوات المشترك بها: <strong>${response.stats.subscribed_channels}</strong></li>
+        <li style="margin-bottom: 10px;">📊 إجمالي الفيديوهات المقروءة: <strong>${escapeHTML(response.stats.total_watched)}</strong></li>
+        <li style="margin-bottom: 10px;">📅 فترة التحليل: <strong>${escapeHTML(response.stats.analysis_period_days)} يوماً</strong></li>
+        <li style="margin-bottom: 10px;">🔔 إجمالي القنوات المشترك بها: <strong>${escapeHTML(response.stats.subscribed_channels)}</strong></li>
       `;
       currentStep = 1;
       showScreen(metadataSection);

@@ -11,6 +11,22 @@ from app.scoring.aggregator import aggregate_scores
 
 SUPPORTED_SUBSCRIPTION_EXTENSIONS = (".xls", ".xlsx", ".csv", ".tsv")
 
+# ── Zip-extraction safety limits ────────────────────────────────────────
+#
+# The input here is a Google Takeout export the user selects themselves,
+# but treating it as trusted just because it's "the user's own file" is
+# exactly the assumption that bites you if the file was tampered with,
+# downloaded from somewhere else, or simply corrupted. `zipfile.extractall`
+# has no built-in protection against:
+#   - Zip Slip: an entry named e.g. "../../../etc/cron.d/x" that resolves
+#     outside the extraction directory when naively joined.
+#   - Zip bombs: a tiny archive that decompresses to gigabytes, exhausting
+#     disk/RAM.
+# Both are validated before a single byte is extracted.
+_MAX_UNCOMPRESSED_TOTAL_BYTES = 2 * 1024 * 1024 * 1024   # 2 GB — generous for a Takeout export
+_MAX_UNCOMPRESSED_FILE_BYTES = 512 * 1024 * 1024          # 512 MB per single file
+_MAX_COMPRESSION_RATIO = 100                              # flag suspiciously extreme compression
+
 
 class Dispatcher:
 
@@ -89,8 +105,51 @@ class Dispatcher:
     def _handle_zip(self, zip_path: Path) -> FilteredDataset:
         with tempfile.TemporaryDirectory() as tmpdir:
             with zipfile.ZipFile(zip_path, "r") as zf:
-                zf.extractall(tmpdir)
+                self._safe_extract(zf, Path(tmpdir))
             return self._handle_folder(Path(tmpdir))
+
+    @staticmethod
+    def _safe_extract(zf: zipfile.ZipFile, dest: Path) -> None:
+        """Validate every entry before extracting (zip-slip / zip-bomb guard).
+
+        Raises ``ValueError`` — caught by ``main.py``'s ``API.parse`` and
+        reported back to the UI as a normal, user-facing error — rather
+        than letting a crafted archive write outside ``dest`` or exhaust
+        disk space silently.
+        """
+        dest = dest.resolve()
+        total_uncompressed = 0
+
+        for info in zf.infolist():
+            # Zip Slip: resolve the target path and make sure it's still
+            # inside `dest`. Path.resolve() collapses "..", so a member
+            # like "../../evil" would resolve outside `dest` and be caught.
+            target = (dest / info.filename).resolve()
+            if target != dest and dest not in target.parents:
+                raise ValueError(f"Unsafe path in archive, refusing to extract: {info.filename}")
+
+            if info.is_dir():
+                continue
+
+            if info.file_size > _MAX_UNCOMPRESSED_FILE_BYTES:
+                raise ValueError(
+                    f"Archive entry too large ({info.file_size} bytes): {info.filename}"
+                )
+
+            # Guard against zip bombs: absurd compression ratios on a
+            # non-trivial file are a classic red flag.
+            if info.compress_size > 0:
+                ratio = info.file_size / info.compress_size
+                if ratio > _MAX_COMPRESSION_RATIO and info.file_size > 1024 * 1024:
+                    raise ValueError(
+                        f"Archive entry has a suspicious compression ratio: {info.filename}"
+                    )
+
+            total_uncompressed += info.file_size
+            if total_uncompressed > _MAX_UNCOMPRESSED_TOTAL_BYTES:
+                raise ValueError("Archive is too large once decompressed — refusing to extract.")
+
+        zf.extractall(dest)
 
     def _handle_folder(self, root: Path) -> FilteredDataset:
         watch_path = self._find_watch_history(root)
@@ -127,31 +186,3 @@ class Dispatcher:
                 except Exception:
                     continue
         return None
-
-    def _get_stratified_sample(self, videos: list, n: int) -> tuple[list, dict]:
-        import random
-
-        videos = sorted(videos, key=lambda v: v.timestamp)
-        n = min(n, len(videos))
-        num_parts = max(1, min(n // 100, 10))
-        part_size = len(videos) // num_parts
-        per_part  = n // num_parts
-
-        sample = []
-        for i in range(num_parts):
-            start = i * part_size
-            end   = start + part_size if i < num_parts - 1 else len(videos)
-            part  = videos[start:end]
-            take  = min(per_part, len(part))
-            sample += random.sample(part, take)
-
-        metadata = {
-            "requested":              n,
-            "actual":                 len(sample),
-            "total_available":        len(videos),
-            "parts_used":             num_parts,
-            "estimated_minutes":      round(len(sample) / 50 * 0.4, 1),
-            "margin_of_error":        round(1 / (len(sample) ** 0.5) * 100, 1),
-        }
-
-        return sample, metadata
