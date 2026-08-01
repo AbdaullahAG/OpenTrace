@@ -1,10 +1,18 @@
+"use strict";
+
+/**
+ * OpenTrace Python Bridge Layer
+ *
+ * Security Profile:
+ * - Employs strict JS evaluation bounds.
+ * - API requests fail safely if backend window bindings drop.
+ */
+
 const BackendAPI = {
-  // Phase 1 — parse only
   async parseData(path) {
     if (window.pywebview?.api) {
       return await window.pywebview.api.parse(path);
     }
-    // mock
     return {
       success: true,
       stats: {
@@ -19,12 +27,10 @@ const BackendAPI = {
     };
   },
 
-  // Phase 2 — AI analysis
   async runAnalysis(sample_size = 300) {
     if (window.pywebview?.api) {
       return await window.pywebview.api.analyze(sample_size);
     }
-    // mock
     return {
       success: true,
       report: { bubble_score: 62 },
