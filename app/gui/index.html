@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- OWASP A03:2021 - Security Misconfiguration (Content Security Policy) -->
+    <!-- Restricts asset loading to the local origin, allows specific Google Fonts, and blocks unauthorized external scripts -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline';"
+    />
+
     <title>OpenTrace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -11,75 +19,6 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/style.css" />
-    <style>
-      body {
-        font-family: "Reem Kufi", sans-serif;
-        line-height: 1.8;
-      }
-
-      .welcome-container {
-        text-align: right;
-        padding: 10px 20px;
-      }
-
-      .welcome-container h2 {
-        font-size: 26px;
-        font-weight: 700;
-        margin-bottom: 10px;
-        color: var(--text-main, #222);
-      }
-
-      .welcome-container p {
-        font-size: 16px;
-        margin-bottom: 25px;
-        color: var(--text-muted, #555);
-      }
-
-      .instructions-box {
-        background-color: var(--bg-alt, #f8f9fa);
-        border: 1px solid var(--border-color, #e0e0e0);
-        border-radius: 12px;
-        padding: 20px 25px;
-        margin-bottom: 30px;
-      }
-
-      .instructions-box h3 {
-        font-size: 18px;
-        font-weight: 600;
-        margin-top: 0;
-        margin-bottom: 15px;
-        color: var(--text-main, #333);
-      }
-
-      .instructions-box ol,
-      .instructions-box ul {
-        margin: 0;
-        padding-right: 20px;
-      }
-
-      .instructions-box li {
-        font-size: 15px;
-        margin-bottom: 12px;
-        color: var(--text-main, #444);
-      }
-
-      .instructions-box li:last-child {
-        margin-bottom: 0;
-      }
-
-      .drop-zone {
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-      }
-
-      .primary-btn {
-        font-family: "Reem Kufi", sans-serif;
-        font-size: 16px;
-        padding: 12px 30px;
-        cursor: pointer;
-      }
-    </style>
   </head>
   <body>
     <button id="theme-toggle" class="theme-btn">🌙 الوضع الداكن</button>
@@ -168,18 +107,16 @@
         <p>قد يستغرق هذا بعض الوقت بناءً على حجم سجل مشاهداتك.</p>
       </div>
 
-      <!-- شاشة البيانات الأولية (Metadata) -->
       <div id="metadata-section" class="screen hidden">
         <div class="welcome-container">
           <h2>اكتملت قراءة البيانات</h2>
           <p>تم استخراج سجل المشاهدات والاشتراكات بنجاح. إليك نظرة أولية:</p>
-
           <div class="instructions-box" style="text-align: right">
-            <ul style="list-style-type: none; padding: 0" id="metadata-list">
-              <!-- سيتم تعبئة هذه القائمة عبر جافاسكريبت -->
-            </ul>
+            <ul
+              style="list-style-type: none; padding: 0"
+              id="metadata-list"
+            ></ul>
           </div>
-
           <div class="drop-zone">
             <button id="start-analysis-btn" class="primary-btn">
               تشغيل التحليل الخوارزمي
@@ -191,7 +128,6 @@
       <div id="results-section" class="screen hidden">
         <h2>ملخص الخوارزمية الخاصة بك</h2>
         <div id="llm-insight-box" class="insight-box"></div>
-
         <button id="start-over-btn" class="secondary-btn">ابدأ من جديد</button>
       </div>
     </main>

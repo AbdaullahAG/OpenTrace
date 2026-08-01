@@ -573,33 +573,6 @@ button:focus-visible {
   background: rgba(123, 139, 255, 0.1);
 }
 
-/* --- Contextual Media Frames --- */
-.gif-frame {
-  width: 100%;
-  max-width: 400px;
-  height: 200px;
-  margin: 10px auto;
-  border-radius: var(--radius-md);
-  background: rgba(128, 128, 128, 0.05);
-  border: 2px dashed rgba(var(--glow-a), 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.gif-frame img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.gif-placeholder-text {
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
-}
-
 /* --- Theme Overrides (Dark Mode Integration) --- */
 
 /* Standardize report presentation palette */
