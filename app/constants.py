@@ -8,17 +8,20 @@ scoring model itself.
 from __future__ import annotations
 
 TOPIC_CATEGORIES: tuple[str, ...] = (
+    "politics",
+    "sports",
+    "entertainment",
+    "technology",
+    "news",
+    "education",
     "music",
     "gaming",
-    "technology",
-    "news_politics",
-    "education",
-    "entertainment",
-    "sports",
     "religion",
-    "lifestyle_vlogs",
-    "podcasts_interviews",
-    "comedy",
+    "software_engineering",
+    "combat_fitness",
+    "literature_philosophy",
+    "board_games",
+    "language_learning",
     "other",
 )
 
