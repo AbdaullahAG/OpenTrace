@@ -11,7 +11,7 @@ check:
 	curl -s http://localhost:11434/api/tags || echo "Ollama مو شغال"
 
 test:
-	.venv/bin/python -m pytest tests/ -v
+	.venv/bin/python -m pytest test/ -v
 
 clean:
 	rm -rf .venv .pytest_cache
