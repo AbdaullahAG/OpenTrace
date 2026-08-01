@@ -64,13 +64,13 @@ class ClassifyTopicsTests(unittest.TestCase):
             attempts["n"] += 1
             if attempts["n"] < 2:
                 raise OllamaError("simulated transient failure")
-            return _json_response(["music", "gaming", "news"])
+            return _json_response(["music", "gaming", "news_politics"])
 
         client = FakeClient(responder)
         with patch("app.llm.classifier.CLASSIFICATION_RETRY_BACKOFF_SECONDS", 0.01):
             result = classifier.classify_topics(client, titles)
 
-        self.assertEqual(result.labels, ["music", "gaming", "news"])
+        self.assertEqual(result.labels, ["music", "gaming", "news_politics"])
         self.assertEqual(result.failed, 0)
         self.assertGreaterEqual(attempts["n"], 2)
 
