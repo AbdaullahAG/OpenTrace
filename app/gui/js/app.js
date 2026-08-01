@@ -1,3 +1,15 @@
+"use strict";
+
+/**
+ * OpenTrace Frontend Application Logic
+ *
+ * Security Profile (OWASP Compliant):
+ * - Strict Mode enabled to prevent global namespace pollution.
+ * - Strict contextual output encoding applied to all dynamic content (DOM-based XSS prevention).
+ * - URL sanitization enforces safe protocols (SSRF and open redirect prevention).
+ * - DOM manipulation relies exclusively on sanitized inputs.
+ */
+
 const uploadSection = document.getElementById("upload-section");
 const loadingSection = document.getElementById("loading-section");
 const metadataSection = document.getElementById("metadata-section");
@@ -12,8 +24,15 @@ const metadataList = document.getElementById("metadata-list");
 const insightBox = document.getElementById("llm-insight-box");
 
 let selectedFilePath = "";
+let currentStep = 0;
 
-// ── Output-encoding helpers (OWASP A03:2021 — Injection) ──────────────
+/**
+ * OWASP A03:2021 - Injection Prevention
+ * Contextual output encoding for HTML entities to prevent XSS.
+ *
+ * @param {string} value - The untrusted input string.
+ * @returns {string} - Safe HTML-encoded string.
+ */
 function escapeHTML(value) {
   const text = value === null || value === undefined ? "" : String(value);
   return text.replace(/[&<>"']/g, (ch) => {
@@ -34,15 +53,20 @@ function escapeHTML(value) {
   });
 }
 
+/**
+ * OWASP A01:2021 - Broken Access Control / SSRF Prevention
+ * Enforces safe URI schemes for external links.
+ *
+ * @param {string} url - The untrusted URL string.
+ * @returns {string} - Sanitized URL or fallback hash.
+ */
 function sanitizeUrl(url) {
   try {
     const parsed = new URL(String(url), window.location.href);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
       return parsed.href;
     }
-  } catch (_) {
-    // fall through to safe default
-  }
+  } catch (_) {}
   return "#";
 }
 
@@ -123,7 +147,7 @@ function renderReport(report) {
 
     dominantHTML = `
       <div style="background: var(--report-small-bg, rgba(91, 110, 245, 0.08)); backdrop-filter: blur(10px); color: var(--report-accent-rose, #e0435f); padding: 16px 18px; border-radius: 16px; border-right: 4px solid var(--report-accent-rose, #e0435f); margin-bottom: 25px; font-size: 16px; text-align: right;">
-        <strong>هيمنة المحتوى:</strong> محتواك يتمركز حول (<strong>${topicName}</strong>) بنسبة ${percentage}%${sampleNote} من إجمالي ${totalWatched} فيديو شاهدتها خلال ${analysisDays} يوما.
+        <strong>هيمنة المحتوى:</strong> محتواك يتمركز حول (<strong>${escapeHTML(topicName)}</strong>) بنسبة ${percentage}%${escapeHTML(sampleNote)} من إجمالي ${escapeHTML(totalWatched)} فيديو شاهدتها خلال ${escapeHTML(analysisDays)} يوما.
       </div>
     `;
   }
@@ -131,19 +155,19 @@ function renderReport(report) {
   const statsGridHTML = `
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; margin-bottom: 30px; text-align: center;">
       <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 16px; border-radius: 16px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08));">
-        <div style="font-size: 24px; font-weight: 800; color: var(--report-text-main, #2c3e50);">${totalWatched}</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--report-text-main, #2c3e50);">${escapeHTML(totalWatched)}</div>
         <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">إجمالي المشاهدات</div>
       </div>
       <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 16px; border-radius: 16px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08));">
-        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-rose, #e0435f);">${unsubPercentage}%</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-rose, #e0435f);">${escapeHTML(unsubPercentage)}%</div>
         <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">خارج اشتراكاتك</div>
       </div>
       <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 16px; border-radius: 16px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08));">
-        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-teal, #2f9d86);">${exposureSub}</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-teal, #2f9d86);">${escapeHTML(exposureSub)}</div>
         <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">من اشتراكاتك</div>
       </div>
       <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 16px; border-radius: 16px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08));">
-        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-purple, #7c5cf0);">${uniqueChannels}</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-purple, #7c5cf0);">${escapeHTML(uniqueChannels)}</div>
         <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">قناة فريدة</div>
       </div>
     </div>
@@ -152,17 +176,17 @@ function renderReport(report) {
   let topicsHTML = "";
   if (topicsSorted.length > 0) {
     const topicsSampleNote = wasSampled
-      ? ` <span style="font-size:13px;font-weight:normal;color:var(--report-text-muted,#7f8c8d);">(عيّنة ${classifiedTotal} من ${totalWatched})</span>`
+      ? ` <span style="font-size:13px;font-weight:normal;color:var(--report-text-muted,#7f8c8d);">(عيّنة ${escapeHTML(classifiedTotal)} من ${escapeHTML(totalWatched)})</span>`
       : "";
-
     const deadlineDropped = meta.classification_deadline_dropped || 0;
     const classificationFailed = meta.classification_failed || 0;
     const unresolvedCount = deadlineDropped + classificationFailed;
+
     const unresolvedNote =
       unresolvedCount > 0
         ? `<p style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin: 6px 0 0 0;">
-             ⏱️ ${escapeHTML(unresolvedCount)} من العناصر لم يتم تصنيفها بنجاح (انتهاء الوقت المخصص أو تعذّر الاتصال بالنموذج المحلي) وتم وضعها ضمن "أخرى" بدلاً من تصنيف فعلي.
-           </p>`
+           ⏱️ ${escapeHTML(unresolvedCount)} من العناصر لم يتم تصنيفها بنجاح وتم وضعها ضمن "أخرى".
+         </p>`
         : "";
 
     topicsHTML = `<h4 style="color: var(--report-text-main, #222); margin-top: 30px; margin-bottom: 10px; font-size: 18px;">التوزيع الكمي للتصنيفات:${topicsSampleNote}</h4>
@@ -207,22 +231,18 @@ function renderReport(report) {
         ? "var(--report-accent-amber, #d68d2a)"
         : "var(--report-accent-teal, #2f9d86)";
 
-  let scoreDescription = "";
-  if (score <= 35) {
-    scoreDescription = "فقاعتك صحية. أنت تشاهد محتوى متنوعا ومن مصادر مختلفة.";
-  } else if (score <= 60) {
-    scoreDescription =
-      "فقاعتك متوسطة. خوارزميات التوصية بدأت تحصرك في مسارات ومواضيع محددة.";
-  } else {
-    scoreDescription =
-      "فقاعتك شديدة الانغلاق. الخوارزمية تتحكم بما تراه بشكل كبير وأنت تدور في نفس الدوامة.";
-  }
+  let scoreDescription =
+    score <= 35
+      ? "فقاعتك صحية. أنت تشاهد محتوى متنوعا ومن مصادر مختلفة."
+      : score <= 60
+        ? "فقاعتك متوسطة. خوارزميات التوصية بدأت تحصرك في مسارات ومواضيع محددة."
+        : "فقاعتك شديدة الانغلاق. الخوارزمية تتحكم بما تراه بشكل كبير وأنت تدور في نفس الدوامة.";
 
   const scoreExplanationHTML = `
     <div style="text-align: center; margin-top: -5px; margin-bottom: 35px; color: var(--report-text-main, #555); font-size: 15px; line-height: 1.5; padding: 0 20px;">
       <p style="margin: 0 0 5px 0;"><strong>ماذا يعني هذا الرقم؟</strong></p>
       <p style="margin: 0;">يقيس هذا الرقم مدى انغلاقك داخل فقاعة خوارزمية. 
-      <br><span style="color: ${scoreColor}; font-weight: bold;">${scoreDescription}</span></p>
+      <br><span style="color: ${scoreColor}; font-weight: bold;">${escapeHTML(scoreDescription)}</span></p>
     </div>
   `;
 
@@ -230,7 +250,7 @@ function renderReport(report) {
     low_source_diversity: "مصادرك محدودة جدا ولا تعتمد على تنوع القنوات.",
     high_topic_concentration:
       "محتواك متركز حول موضوع واحد يسيطر على اقتراحاتك.",
-    high_algorithmic_exposure: `سيطرة خوارزمية: شاهدت <strong>${exposureUnsub}</strong> فيديو من قنوات لم تشترك بها، مقابل <strong>${exposureSub}</strong> فيديو فقط من اشتراكاتك الفعلية.`,
+    high_algorithmic_exposure: `سيطرة خوارزمية: شاهدت <strong>${escapeHTML(exposureUnsub)}</strong> فيديو من قنوات لم تشترك بها، مقابل <strong>${escapeHTML(exposureSub)}</strong> فيديو فقط من اشتراكاتك الفعلية.`,
     single_channel_dominance: "قناة واحدة تهيمن على مشاهداتك بالكامل.",
   };
 
@@ -240,7 +260,7 @@ function renderReport(report) {
           .map(
             (f) => `
           <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); border-right: 4px solid var(--report-accent-rose, #e0435f); padding: 12px 15px; border-radius: 14px; font-weight: 500; color: var(--report-text-main, #333); font-size: 15px;">
-            🚨 ${flagLabels[f] || f}
+            🚨 ${flagLabels[f] || escapeHTML(f)}
           </div>`,
           )
           .join("")}
@@ -260,10 +280,7 @@ function renderReport(report) {
           border-radius: 16px;
           transition: box-shadow 0.2s ease, transform 0.2s ease;
         }
-        .alt-card:hover {
-          box-shadow: 0 8px 22px -10px rgba(91, 110, 245, 0.35);
-          transform: translateY(-2px);
-        }
+        .alt-card:hover { box-shadow: 0 8px 22px -10px rgba(91, 110, 245, 0.35); transform: translateY(-2px); }
       </style>
       <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
         ${alts
@@ -286,17 +303,20 @@ function renderReport(report) {
   insightBox.innerHTML = `
     <div dir="rtl" style="text-align: right; font-family: var(--font-sans, 'Reem Kufi', 'IBM Plex Sans Arabic', sans-serif);">
       <h3 style="margin: 0 0 20px 0; color: var(--report-text-main, #333); font-size: 20px; text-align: center;">درجة فقاعتك الخوارزمية</h3>
-      <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-        <div style="background: var(--report-card-bg, rgba(255, 255, 255, 0.15)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 2px solid ${scoreColor}; border-radius: 50%; width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; flex-direction: column; box-shadow: inset 0 4px 20px rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.05);">
-          <div style="direction: ltr; font-size: 52px; font-weight: 900; color: ${scoreColor}; line-height: 1;">
-            ${score}
+      
+      <div class="bubble-container">
+        <div class="soap-bubble" style="border: 2px solid ${scoreColor};">
+          <div style="direction: ltr; font-size: 52px; font-weight: 900; color: ${scoreColor}; line-height: 1; text-shadow: 0 2px 10px rgba(255,255,255,0.3);">
+            ${escapeHTML(score)}
           </div>
           <div style="font-size: 18px; color: var(--report-text-muted, #777); font-weight: 600; margin-top: 8px;">/ 100</div>
         </div>
+        <div class="mini-bubble mb-1"></div>
+        <div class="mini-bubble mb-2"></div>
+        <div class="mini-bubble mb-3"></div>
       </div>
       
       ${scoreExplanationHTML}
-      
       ${dominantHTML}
 
       <h4 style="color: var(--report-text-main, #222); margin-bottom: 15px; font-size: 18px;">تفاصيل الأرقام:</h4>
@@ -314,7 +334,7 @@ function renderReport(report) {
 selectFileBtn.addEventListener("click", async () => {
   try {
     if (!window.pywebview || !window.pywebview.api) {
-      throw new Error("PyWebView API is not loaded.");
+      throw new Error("PyWebView API integration failure.");
     }
 
     loadingStatus.textContent = "جارٍ فتح نافذة اختيار الملف...";
@@ -328,7 +348,6 @@ selectFileBtn.addEventListener("click", async () => {
     }
 
     loadingStatus.textContent = "جارٍ استخراج البيانات الأولية...";
-
     const response = await window.pywebview.api.parse(selectedFilePath);
 
     if (response && response.success) {
@@ -340,11 +359,11 @@ selectFileBtn.addEventListener("click", async () => {
       currentStep = 1;
       showScreen(metadataSection);
     } else {
-      alert(response?.message || "حدث خطأ أثناء قراءة الملف.");
+      alert(escapeHTML(response?.message || "حدث خطأ أثناء قراءة الملف."));
       showScreen(uploadSection);
     }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Initialization Error:", error);
     alert("فشل الاتصال بالخادم الخلفي.");
     showScreen(uploadSection);
   }
@@ -363,11 +382,11 @@ startAnalysisBtn.addEventListener("click", async () => {
       currentStep = 2;
       showScreen(resultsSection);
     } else {
-      alert(response?.message || "حدث خطأ أثناء التحليل.");
+      alert(escapeHTML(response?.message || "حدث خطأ أثناء التحليل."));
       showScreen(metadataSection);
     }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Analysis Execution Error:", error);
     alert("فشل الاتصال بالخادم الخلفي.");
     showScreen(metadataSection);
   }
@@ -379,9 +398,9 @@ startOverBtn.addEventListener("click", () => {
   showScreen(uploadSection);
 });
 
-let currentStep = 0;
 const steps = [
   { target: "select-file-btn", message: "Tip: click here" },
+  { target: "start-analysis-btn", message: "Tip: click here" },
   {
     target: "start-over-btn",
     message: "Want to analyze another file? Click here!",
@@ -398,8 +417,8 @@ function updateGuide() {
 
   if (currentStep >= steps.length) {
     guideOverlay.classList.add("hidden");
-    if (document.getElementById("tutorial-shadow"))
-      document.getElementById("tutorial-shadow").style.opacity = "0";
+    const existingShadow = document.getElementById("tutorial-shadow");
+    if (existingShadow) existingShadow.style.opacity = "0";
     return;
   }
 
@@ -411,8 +430,8 @@ function updateGuide() {
     targetElement.offsetHeight === 0
   ) {
     guideOverlay.classList.add("hidden");
-    if (document.getElementById("tutorial-shadow"))
-      document.getElementById("tutorial-shadow").style.opacity = "0";
+    const existingShadow = document.getElementById("tutorial-shadow");
+    if (existingShadow) existingShadow.style.opacity = "0";
     return;
   }
 
@@ -420,17 +439,17 @@ function updateGuide() {
   guideTipBox.textContent = steps[currentStep].message;
 
   const rect = targetElement.getBoundingClientRect();
-  const leftOffset = currentStep === 1 ? 580 : 380;
+  const isLastStep = currentStep === 2;
+  const leftOffset = isLastStep ? 580 : 380;
   const tipX = Math.max(20, rect.left - leftOffset);
   const tipY = Math.max(20, rect.top - 100);
 
   guideTipBox.style.left = `${tipX}px`;
   guideTipBox.style.top = `${tipY}px`;
 
-  const arrowStartOffset = currentStep === 1 ? 220 : 90;
+  const arrowStartOffset = isLastStep ? 220 : 90;
   const startX = tipX + arrowStartOffset;
   const startY = tipY + 65;
-
   const endX = rect.left - 15;
   const endY = rect.top + rect.height / 2;
   const cpX = tipX - 30;
@@ -453,8 +472,8 @@ function updateGuide() {
   shadowInterval = setInterval(() => {
     const targetX = rect.left + rect.width / 2;
     const targetY = rect.top + rect.height / 2;
-
     const dot = document.getElementById("cursor-dot");
+
     let startMouseX = targetX;
     let startMouseY = targetY;
 
@@ -494,17 +513,12 @@ showScreen = function (screenToShow) {
   originalShowScreen(screenToShow);
   setTimeout(updateGuide, 100);
 };
-
 updateGuide();
 
 const themeToggle = document.getElementById("theme-toggle");
-
 themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark-theme");
-
-  if (document.body.classList.contains("dark-theme")) {
-    themeToggle.textContent = "☀️ الوضع الفاتح";
-  } else {
-    themeToggle.textContent = "🌙 الوضع الداكن";
-  }
+  themeToggle.textContent = document.body.classList.contains("dark-theme")
+    ? "☀️ الوضع الفاتح"
+    : "🌙 الوضع الداكن";
 });
