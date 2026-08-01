@@ -19,6 +19,22 @@
   --font-sans:
     "Reem Kufi", "IBM Plex Sans", "IBM Plex Sans Arabic", "Segoe UI", Tahoma,
     Arial, sans-serif;
+
+  /* Report / insight-panel tokens — mirror the ambient palette so the
+     analysis screen reads as part of this app, not a bolted-on widget.
+     The teal/purple accents intentionally match --glow-b/--glow-c so the
+     report echoes the same colors as the background blobs. */
+  --report-card-bg: rgba(255, 255, 255, 0.55);
+  --report-alt-bg: rgba(255, 255, 255, 0.5);
+  --report-small-bg: rgba(91, 110, 245, 0.08);
+  --report-text-main: var(--text-color);
+  --report-text-muted: var(--text-muted);
+  --report-border: var(--border-hairline);
+  --report-link: var(--primary-color);
+  --report-accent-teal: #2f9d86;
+  --report-accent-purple: #7c5cf0;
+  --report-accent-rose: #e0435f;
+  --report-accent-amber: #d68d2a;
 }
 
 body.dark-theme {
@@ -314,16 +330,19 @@ button:focus-visible {
 
 /* --- Result Visualization --- */
 .insight-box {
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--report-card-bg, rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  padding: 24px;
+  padding: 28px 24px;
   width: 100%;
-  text-align: left;
+  text-align: right;
   font-size: 1.05rem;
+  font-family: var(--font-sans);
   color: var(--text-color);
   unicode-bidi: plaintext;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 /* --- Custom Cursor Layer --- */
@@ -591,6 +610,11 @@ body.dark-theme {
   --report-alt-bg: rgba(255, 255, 255, 0.03);
   --report-small-bg: rgba(255, 255, 255, 0.1);
   --report-link: #8fa1ff;
+  --report-border: rgba(255, 255, 255, 0.12);
+  --report-accent-teal: #6fd6be;
+  --report-accent-purple: #a88fff;
+  --report-accent-rose: #f0748c;
+  --report-accent-amber: #f0b563;
 }
 
 /* Standardize component transparency and borders */

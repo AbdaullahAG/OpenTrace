@@ -14,12 +14,6 @@ const insightBox = document.getElementById("llm-insight-box");
 let selectedFilePath = "";
 
 // ── Output-encoding helpers (OWASP A03:2021 — Injection) ──────────────
-//
-// Channel names and titles come from the user's Google Takeout export.
-// That file can be edited, shared, or (in principle) crafted, so it is
-// untrusted input as far as the renderer is concerned. Every dynamic
-// value gets escaped before it is interpolated into an innerHTML
-// template — never trust data just because "it's the user's own file".
 function escapeHTML(value) {
   const text = value === null || value === undefined ? "" : String(value);
   return text.replace(/[&<>"']/g, (ch) => {
@@ -40,8 +34,6 @@ function escapeHTML(value) {
   });
 }
 
-// Only allow http(s) URLs in href attributes — blocks `javascript:`,
-// `data:`, and similar schemes that could execute script on click.
 function sanitizeUrl(url) {
   try {
     const parsed = new URL(String(url), window.location.href);
@@ -79,7 +71,6 @@ function renderReport(report) {
   const alts = report.suggested_alternatives ?? [];
   const meta = report.metadata ?? {};
 
-  // حساب الأرقام الدقيقة للوحة الإحصائيات[cite: 5]
   const totalWatched = meta.exposure_total || meta.total_items || 0;
   const exposureUnsub = meta.exposure_unsubscribed || 0;
   const exposureSub = totalWatched > 0 ? totalWatched - exposureUnsub : 0;
@@ -88,7 +79,6 @@ function renderReport(report) {
   const uniqueChannels = meta.unique_channels || 0;
   const analysisDays = meta.analysis_period_days || 0;
 
-  // تجهيز التصنيفات وتحديد المهيمن منها[cite: 5]
   const topics = report.topic_distribution || {};
   const topicLabels = {
     politics: "سياسة",
@@ -109,10 +99,12 @@ function renderReport(report) {
   };
 
   const topicsSorted = Object.entries(topics).sort((a, b) => b[1] - a[1]);
-  const classifiedTotal = topicsSorted.reduce((sum, [, count]) => sum + count, 0);
+  const classifiedTotal = topicsSorted.reduce(
+    (sum, [, count]) => sum + count,
+    0,
+  );
   const wasSampled = meta.sampled_for_ai === true;
 
-  // بناء قسم الهيمنة المباشر
   let dominantHTML = "";
   if (topicsSorted.length > 0 && classifiedTotal > 0) {
     let dominantTopic = topicsSorted[0][0];
@@ -123,9 +115,6 @@ function renderReport(report) {
       dominantCount = topicsSorted[1][1];
     }
 
-    // النسبة محسوبة من العدد المصنَّف فعلياً (classifiedTotal)، مش من
-    // إجمالي المشاهدات — لو صارت عيّنة، الاتنين مختلفين وحساب النسبة
-    // من الإجمالي كان بيطلع رقم مضلِّل
     const percentage = Math.round((dominantCount / classifiedTotal) * 100);
     const topicName = topicLabels[dominantTopic] || dominantTopic;
     const sampleNote = wasSampled
@@ -133,29 +122,28 @@ function renderReport(report) {
       : "";
 
     dominantHTML = `
-      <div style="background: var(--report-alt-bg, #fdf2f2); color: #c0392b; padding: 15px; border-radius: 8px; border-right: 5px solid #c0392b; margin-bottom: 25px; font-size: 16px; text-align: right;">
+      <div style="background: var(--report-small-bg, rgba(91, 110, 245, 0.08)); backdrop-filter: blur(10px); color: var(--report-accent-rose, #e0435f); padding: 16px 18px; border-radius: 16px; border-right: 4px solid var(--report-accent-rose, #e0435f); margin-bottom: 25px; font-size: 16px; text-align: right;">
         <strong>هيمنة المحتوى:</strong> محتواك يتمركز حول (<strong>${topicName}</strong>) بنسبة ${percentage}%${sampleNote} من إجمالي ${totalWatched} فيديو شاهدتها خلال ${analysisDays} يوما.
       </div>
     `;
   }
 
-  // بناء شبكة الإحصائيات (Stats Grid)[cite: 5]
   const statsGridHTML = `
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 30px; text-align: center;">
-      <div style="background: var(--report-alt-bg, #f8f9fa); padding: 15px; border-radius: 8px; border: 1px solid var(--report-border, #ddd);">
-        <div style="font-size: 24px; font-weight: bold; color: var(--report-text-main, #2c3e50);">${totalWatched}</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; margin-bottom: 30px; text-align: center;">
+      <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 16px; border-radius: 16px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08));">
+        <div style="font-size: 24px; font-weight: 800; color: var(--report-text-main, #2c3e50);">${totalWatched}</div>
         <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">إجمالي المشاهدات</div>
       </div>
-      <div style="background: var(--report-alt-bg, #f8f9fa); padding: 15px; border-radius: 8px; border: 1px solid var(--report-border, #ddd);">
-        <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">${unsubPercentage}%</div>
+      <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 16px; border-radius: 16px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08));">
+        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-rose, #e0435f);">${unsubPercentage}%</div>
         <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">خارج اشتراكاتك</div>
       </div>
-      <div style="background: var(--report-alt-bg, #f8f9fa); padding: 15px; border-radius: 8px; border: 1px solid var(--report-border, #ddd);">
-        <div style="font-size: 24px; font-weight: bold; color: #27ae60;">${exposureSub}</div>
+      <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 16px; border-radius: 16px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08));">
+        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-teal, #2f9d86);">${exposureSub}</div>
         <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">من اشتراكاتك</div>
       </div>
-      <div style="background: var(--report-alt-bg, #f8f9fa); padding: 15px; border-radius: 8px; border: 1px solid var(--report-border, #ddd);">
-        <div style="font-size: 24px; font-weight: bold; color: #8e44ad;">${uniqueChannels}</div>
+      <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 16px; border-radius: 16px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08));">
+        <div style="font-size: 24px; font-weight: 800; color: var(--report-accent-purple, #7c5cf0);">${uniqueChannels}</div>
         <div style="font-size: 13px; color: var(--report-text-muted, #7f8c8d); margin-top: 5px;">قناة فريدة</div>
       </div>
     </div>
@@ -167,9 +155,6 @@ function renderReport(report) {
       ? ` <span style="font-size:13px;font-weight:normal;color:var(--report-text-muted,#7f8c8d);">(عيّنة ${classifiedTotal} من ${totalWatched})</span>`
       : "";
 
-    // Be honest with the person: distinguish "the model looked and said
-    // other" from "we ran out of time / retries and gave up" instead of
-    // silently blending both into the same "other" bucket with no context.
     const deadlineDropped = meta.classification_deadline_dropped || 0;
     const classificationFailed = meta.classification_failed || 0;
     const unresolvedCount = deadlineDropped + classificationFailed;
@@ -185,7 +170,7 @@ function renderReport(report) {
       ${topicsSorted
         .map(
           ([topic, count]) => `
-        <div style="background: var(--report-alt-bg, #f0f4f8); padding: 8px 12px; border-radius: 20px; font-size: 14px; border: 1px solid var(--report-border, #ddd); color: var(--report-text-main, #333);">
+        <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); padding: 8px 12px; border-radius: 20px; font-size: 14px; border: 1px solid var(--report-border, rgba(0, 0, 0, 0.08)); color: var(--report-text-main, #333);">
           <strong>${escapeHTML(topicLabels[topic] || topic)}</strong>: ${escapeHTML(count)}
         </div>
       `,
@@ -204,9 +189,9 @@ function renderReport(report) {
         ${channels
           .map(
             (c) => `
-          <li style="background: var(--report-alt-bg, #f8f9fa); padding: 10px 15px; border-radius: 8px; border-right: 4px solid #3498db; display: flex; justify-content: space-between; align-items: center; color: var(--report-text-main, #333);">
+          <li style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); padding: 10px 15px; border-radius: 14px; border-right: 4px solid var(--primary-color, #5b6ef5); display: flex; justify-content: space-between; align-items: center; color: var(--report-text-main, #333);">
             <span style="font-weight: 500; word-break: break-word;">${escapeHTML(c.name)}</span>
-            <span style="background: var(--report-small-bg, #e9ecef); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: var(--report-text-muted, #555); white-space: nowrap;">${escapeHTML(c.count)} مشاهدة</span>
+            <span style="background: var(--report-small-bg, rgba(91, 110, 245, 0.08)); padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: bold; color: var(--report-text-muted, #555); white-space: nowrap;">${escapeHTML(c.count)} مشاهدة</span>
           </li>
         `,
           )
@@ -216,7 +201,11 @@ function renderReport(report) {
   }
 
   const scoreColor =
-    score > 60 ? "#c0392b" : score > 35 ? "#e67e22" : "#27ae60";
+    score > 60
+      ? "var(--report-accent-rose, #e0435f)"
+      : score > 35
+        ? "var(--report-accent-amber, #d68d2a)"
+        : "var(--report-accent-teal, #2f9d86)";
 
   let scoreDescription = "";
   if (score <= 35) {
@@ -237,7 +226,6 @@ function renderReport(report) {
     </div>
   `;
 
-  // ربط الأعلام بالبيانات الرقمية الصريحة[cite: 5]
   const flagLabels = {
     low_source_diversity: "مصادرك محدودة جدا ولا تعتمد على تنوع القنوات.",
     high_topic_concentration:
@@ -251,27 +239,42 @@ function renderReport(report) {
         ${flags
           .map(
             (f) => `
-          <div style="background: var(--report-alt-bg, #f8f9fa); border-right: 4px solid #c0392b; padding: 12px 15px; border-radius: 8px; font-weight: 500; color: var(--report-text-main, #333); font-size: 15px;">
+          <div style="background: var(--report-alt-bg, rgba(255, 255, 255, 0.5)); backdrop-filter: blur(10px); border-right: 4px solid var(--report-accent-rose, #e0435f); padding: 12px 15px; border-radius: 14px; font-weight: 500; color: var(--report-text-main, #333); font-size: 15px;">
             🚨 ${flagLabels[f] || f}
           </div>`,
           )
           .join("")}
        </div>`
-    : `<div style="background: var(--report-alt-bg, #f0fdf4); padding: 12px; border-radius: 8px; color: #27ae60; font-weight: 500;">
+    : `<div style="background: var(--report-small-bg, rgba(91, 110, 245, 0.08)); border-right: 4px solid var(--report-accent-teal, #2f9d86); padding: 12px 15px; border-radius: 14px; color: var(--report-accent-teal, #2f9d86); font-weight: 500;">
          ✨ لم يتم رصد مؤشرات خطر واضحة. فقاعتك صحية.
        </div>`;
 
   const altsHTML = alts.length
-    ? `<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+    ? `
+      <style>
+        .alt-card {
+          background: var(--report-alt-bg, rgba(255, 255, 255, 0.5));
+          backdrop-filter: blur(10px);
+          border-right: 4px solid var(--primary-color, #5b6ef5);
+          padding: 15px;
+          border-radius: 16px;
+          transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .alt-card:hover {
+          box-shadow: 0 8px 22px -10px rgba(91, 110, 245, 0.35);
+          transform: translateY(-2px);
+        }
+      </style>
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
         ${alts
           .map(
             (a) => `
-          <div style="background: var(--report-alt-bg, #f4f7f9); border-right: 4px solid #0056b3; padding: 15px; border-radius: 8px;">
-            <a href="${sanitizeUrl(a.url)}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: var(--report-link, #0056b3); font-weight: bold; font-size: 16px;">
+          <div class="alt-card">
+            <a href="${sanitizeUrl(a.url)}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: var(--report-link, var(--primary-color, #5b6ef5)); font-weight: bold; font-size: 16px;">
               🔗 ${escapeHTML(a.name)}
             </a>
             <p style="margin: 8px 0 0 0; color: var(--report-text-main, #444); line-height: 1.5;">${escapeHTML(a.description)}</p>
-            <small style="color: var(--report-text-muted, #666); display: block; margin-top: 8px; background: var(--report-small-bg, #e9ecef); padding: 6px; border-radius: 4px;">
+            <small style="color: var(--report-text-muted, #666); display: block; margin-top: 8px; background: var(--report-small-bg, rgba(91, 110, 245, 0.08)); padding: 6px 8px; border-radius: 8px;">
               💡 <strong>لماذا؟</strong> ${escapeHTML(a.reason)}
             </small>
           </div>`,
@@ -281,7 +284,7 @@ function renderReport(report) {
     : "";
 
   insightBox.innerHTML = `
-    <div dir="rtl" style="text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div dir="rtl" style="text-align: right; font-family: var(--font-sans, 'Reem Kufi', 'IBM Plex Sans Arabic', sans-serif);">
       <h3 style="margin: 0 0 20px 0; color: var(--report-text-main, #333); font-size: 20px; text-align: center;">درجة فقاعتك الخوارزمية</h3>
       <div style="display: flex; justify-content: center; margin-bottom: 20px;">
         <div style="background: var(--report-card-bg, rgba(255, 255, 255, 0.15)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 2px solid ${scoreColor}; border-radius: 50%; width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; flex-direction: column; box-shadow: inset 0 4px 20px rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.05);">
