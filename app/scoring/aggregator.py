@@ -137,20 +137,24 @@ def aggregate_scores(items: list[dict], *, client: OllamaClient | None = None) -
     return report
 
 
-def _attach_topics(items: list[dict], client: OllamaClient) -> tuple[list[dict], None]:
-    """Classify and attach a ``"topic"`` to each item that has a title."""
+def _attach_topics(items: list[dict], client: OllamaClient) -> tuple[list[dict], "ClassificationResult"]:
+    """Classify and attach a ``"topic"`` to each item that has a title.
+
+    Returns the updated items alongside the full ClassificationResult
+    so aggregate_scores() can surface *why* items ended up as "other"
+    (genuine failure vs deadline drop vs cache hit) in the report.
+    """
     titled_indices = [i for i, item in enumerate(items) if item.get("title")]
     titles   = [items[i]["title"]   for i in titled_indices]
     channels = [items[i].get("channel", "") for i in titled_indices]
 
-    # classify_topics بترجع قائمة نصوص مباشرة
-    labels = classify_topics(client, titles, channels=channels)
+    result = classify_topics(client, titles, channels=channels)
 
     updated = list(items)
-    for index, label in zip(titled_indices, labels):
+    for index, label in zip(titled_indices, result.labels):
         updated[index] = {**updated[index], "topic": label}
 
-    return updated, None
+    return updated, result
 
 def _manipulation_weight(items: list[dict]) -> float:
     channels = top_channels(items, limit=1)
