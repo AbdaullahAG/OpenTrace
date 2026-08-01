@@ -1,12 +1,17 @@
+"use strict";
+
 /**
  * Decorative cursor layer implementation.
- * Conditionally loads based on device capability and reduced-motion preferences.
+ *
+ * Security Profile:
+ * - DOM queries rely on safe `getElementById` selection.
+ * - Confined strictly within an Immediately Invoked Function Expression (IIFE).
  */
 (function () {
   const canUseFineCursor = window.matchMedia(
     "(hover: hover) and (pointer: fine)",
   ).matches;
-  if (!canUseFineCursor) return; // Fallback to native cursor for touch devices
+  if (!canUseFineCursor) return;
 
   const dot = document.getElementById("cursor-dot");
   const outline = document.getElementById("cursor-outline");
@@ -50,7 +55,6 @@
   }
   requestAnimationFrame(animate);
 
-  // Apply scale transformation over interactive elements
   const hoverTargets =
     'button, a, [role="button"], .drop-zone, input, select, textarea';
   document.addEventListener("mouseover", (e) => {
