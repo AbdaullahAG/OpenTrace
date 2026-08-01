@@ -83,6 +83,9 @@ body.dark-theme {
   --report-accent-rose: #f0748c;
   --report-accent-amber: #f0b563;
 
+  --report-text-main: var(--text-color);
+  --report-text-muted: var(--text-muted);
+
   /* --- 3. Dark Soap Bubble Colors --- */
   --bubble-bg: radial-gradient(
     150% 150% at 30% 30%,
