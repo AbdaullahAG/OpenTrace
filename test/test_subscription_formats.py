@@ -72,4 +72,33 @@ def test_parse_tsv_subscriptions(tmp_path):
     assert result[0].channel_id == "UC123"
     assert result[0].channel_url == "https://www.youtube.com/channel/UC123"
     assert result[0].channel_title == "Example Channel"
+
+def test_find_xls_subscriptions_does_not_text_scan_binary_file(
+    tmp_path, monkeypatch
+):
+    subscriptions = tmp_path / "subscriptions.xls"
+    subscriptions.write_bytes(
+        b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1binary-excel-data"
+    )
+
+    dispatcher = Dispatcher()
+
+    original_open = open
+    text_scan_attempted = False
+
+    def guarded_open(file, *args, **kwargs):
+        nonlocal text_scan_attempted
+
+        if str(file).endswith(".xls") and (
+            not args or "b" not in str(args[0])
+        ):
+            text_scan_attempted = True
+
+        return original_open(file, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", guarded_open)
+
+    dispatcher._find_subscriptions(tmp_path)
+
+    assert not text_scan_attempted
     
