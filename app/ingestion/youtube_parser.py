@@ -138,8 +138,10 @@ class YoutubeParser:
         """Fallback: read CSV or TSV."""
         subs = []
         try:
+            delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
+
             with open(path, mode="r", encoding="utf-8", errors="ignore") as f:
-                reader = csv.reader(f, delimiter=",")
+                reader = csv.reader(f, delimiter=delimiter)
                 next(reader, None)  # skip header
 
                 for row in reader:
