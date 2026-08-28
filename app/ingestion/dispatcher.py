@@ -4,12 +4,12 @@ import zipfile
 import tempfile
 from pathlib import Path
 
+import xlrd
+
 from app.models import FilteredDataset
 from app.ingestion.youtube_parser import YoutubeParser
 from app.scoring.adapters import watch_items_to_scoring_input
 from app.scoring.aggregator import aggregate_scores
-
-SUPPORTED_SUBSCRIPTION_EXTENSIONS = (".xls", ".xlsx", ".csv", ".tsv")
 
 # ── Zip-extraction safety limits ────────────────────────────────────────
 #
@@ -176,7 +176,8 @@ class Dispatcher:
         return None
 
     def _find_subscriptions(self, root: Path) -> Path | None:
-        for ext in SUPPORTED_SUBSCRIPTION_EXTENSIONS:
+        # Text-based subscription exports
+        for ext in (".csv", ".tsv"):
             for f in root.rglob(f"*{ext}"):
                 try:
                     with open(f, "r", encoding="utf-8", errors="ignore") as fp:
@@ -185,4 +186,19 @@ class Dispatcher:
                         return f
                 except Exception:
                     continue
+
+        # Legacy Excel subscription exports
+        for f in root.rglob("*.xls"):
+            try:
+                workbook = xlrd.open_workbook(str(f), on_demand=True)
+                sheet = workbook.sheet_by_index(0)
+
+                for row_idx in range(min(sheet.nrows, 5)):
+                    row = [str(value) for value in sheet.row_values(row_idx)]
+                    sample = " ".join(row)
+                    if "UC" in sample and "youtube.com/channel" in sample:
+                        return f
+            except Exception:
+                continue
+
         return None

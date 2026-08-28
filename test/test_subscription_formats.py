@@ -101,4 +101,38 @@ def test_find_xls_subscriptions_does_not_text_scan_binary_file(
     dispatcher._find_subscriptions(tmp_path)
 
     assert not text_scan_attempted
+
+def test_find_xls_subscriptions_from_workbook(tmp_path, monkeypatch):
+    subscriptions = tmp_path / "subscriptions.xls"
+    subscriptions.write_bytes(b"fake-xls")
+
+    class FakeSheet:
+        nrows = 2
+
+        def row_values(self, row_idx):
+            rows = [
+                ["Channel Id", "Channel Url", "Channel Title"],
+                [
+                    "UC123",
+                    "https://www.youtube.com/channel/UC123",
+                    "Example Channel",
+                ],
+            ]
+            return rows[row_idx]
+
+    class FakeWorkbook:
+        def sheet_by_index(self, index):
+            assert index == 0
+            return FakeSheet()
+
+    monkeypatch.setattr(
+        "app.ingestion.dispatcher.xlrd.open_workbook",
+        lambda *args, **kwargs: FakeWorkbook(),
+    )
+
+    dispatcher = Dispatcher()
+
+    result = dispatcher._find_subscriptions(tmp_path)
+
+    assert result == subscriptions
     
