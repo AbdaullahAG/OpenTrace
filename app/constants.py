@@ -20,8 +20,11 @@ TOPIC_CATEGORIES: tuple[str, ...] = (
     "software_engineering",
     "combat_fitness",
     "literature_philosophy",
+    "podcasts_interviews",
     "board_games",
+    "lifestyle_vlogs",
     "language_learning",
+    "comedy",
     "other",
 )
 
@@ -57,8 +60,8 @@ CLASSIFICATION_BATCH_SIZE = 4  # short enough for slower CPU-only inference, big
 #      malformed JSON response, a slow model warm-up), not permanent.
 #   3. Raise the overall deadline to something a real classification
 #      run can plausibly finish inside, instead of ~15 batches worth.
-CLASSIFICATION_MAX_WORKERS = 1         # concurrent in-flight requests to Ollama
-CLASSIFICATION_MAX_RETRIES = 1          # retries per batch before falling back to "other"
+CLASSIFICATION_MAX_WORKERS = 1        # concurrent in-flight requests to Ollama
+CLASSIFICATION_MAX_RETRIES = 1         # retries per batch before falling back to "other"
 CLASSIFICATION_RETRY_BACKOFF_SECONDS = 1.0
 CLASSIFICATION_DEADLINE_SECONDS = 600.0  # 15 min hard ceiling for the whole classification pass
 
@@ -67,4 +70,4 @@ CLASSIFICATION_DEADLINE_SECONDS = 600.0  # 15 min hard ceiling for the whole cla
 # every video. Statistically, 400 uniformly distributed samples gives
 # bubble_score estimates accurate to ±5% (95% CI).
 SMART_SAMPLE_THRESHOLD = 250   # min items before sampling kicks in
-SMART_SAMPLE_SIZE     = 250   # target sample size
+SMART_SAMPLE_SIZE     = 250  # target sample size

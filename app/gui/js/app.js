@@ -104,23 +104,26 @@ function renderReport(report) {
   const analysisDays = meta.analysis_period_days || 0;
 
   const topics = report.topic_distribution || {};
-const topicLabels = {
-  politics: "سياسة",
-  sports: "رياضة",
-  entertainment: "ترفيه",
-  technology: "تكنولوجيا",
-  news: "أخبار",
-  education: "تعليم",
-  music: "موسيقى",
-  gaming: "ألعاب",
-  religion: "دين",
-  software_engineering: "هندسة برمجيات",
-  combat_fitness: "رياضات قتالية ولياقة",
-  literature_philosophy: "أدب وفلسفة",
-  board_games: "ألعاب استراتيجية",
-  language_learning: "تعلم اللغات",
-  other: "أخرى",
-};
+  const topicLabels = {
+    politics: "سياسة",
+    sports: "رياضة",
+    entertainment: "ترفيه",
+    technology: "تكنولوجيا",
+    news: "أخبار",
+    education: "تعليم",
+    music: "موسيقى",
+    gaming: "ألعاب",
+    religion: "دين",
+    software_engineering: "هندسة برمجيات",
+    combat_fitness: "رياضات قتالية ولياقة",
+    literature_philosophy: "أدب وفلسفة",
+    board_games: "ألعاب استراتيجية",
+    language_learning: "تعلم اللغات",
+    lifestyle_vlogs: "مدونات حياتية",
+    podcasts_interviews: "بودكاست ومقابلات",
+    comedy: "كوميديا",
+    other: "أخرى",
+  };
 
   const topicsSorted = Object.entries(topics).sort((a, b) => b[1] - a[1]);
   const classifiedTotal = topicsSorted.reduce(
