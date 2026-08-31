@@ -4,6 +4,7 @@ import csv
 import html
 import re
 import xlrd
+import openpyxl
 import ijson
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs, unquote
@@ -88,7 +89,7 @@ class YoutubeParser:
         self.cutoff = datetime.now(timezone.utc) - timedelta(days=settings.analysis_days)
 
     # ------------------------------------------------------------------ #
-    #  Subscriptions — supports XLS and CSV automatically                #
+    #  Subscriptions — supports XLS, XLSX, CSV, and TSV automatically    #
     # ------------------------------------------------------------------ #
 
     def parse_subscriptions(self) -> List[SubscribedChannel]:
@@ -96,15 +97,17 @@ class YoutubeParser:
             return []
 
         path = Path(self.subscriptions_path)
+        suffix = path.suffix.lower()
 
-        result = self._parse_xls(path)
-        if result:
-            return result
+        if suffix == ".xls":
+            return self._parse_xls(path)
+        if suffix == ".xlsx":
+            return self._parse_xlsx(path)
 
         return self._parse_csv(path)
 
     def _parse_xls(self, path: Path) -> List[SubscribedChannel]:
-        """Read XLS file regardless of header language."""
+        """Read legacy XLS files regardless of header language."""
         try:
             workbook = xlrd.open_workbook(str(path))
             sheet = workbook.sheet_by_index(0)
@@ -134,8 +137,46 @@ class YoutubeParser:
         except Exception:
             return []
 
+    def _parse_xlsx(self, path: Path) -> List[SubscribedChannel]:
+        """Read modern XLSX subscription exports with openpyxl."""
+        workbook = None
+        try:
+            workbook = openpyxl.load_workbook(
+                filename=str(path),
+                read_only=True,
+                data_only=True,
+            )
+            sheet = workbook.active
+            subs = []
+
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                if len(row) < 3:
+                    continue
+
+                channel_id = _sanitize_text(str(row[0] or ""))
+                channel_url = _sanitize_text(str(row[1] or ""))
+                channel_title = _sanitize_text(str(row[2] or ""))
+
+                if not channel_id:
+                    continue
+
+                subs.append(
+                    SubscribedChannel(
+                        channel_id=channel_id,
+                        channel_url=channel_url,
+                        channel_title=channel_title or channel_id,
+                    )
+                )
+
+            return subs
+        except Exception:
+            return []
+        finally:
+            if workbook is not None:
+                workbook.close()
+
     def _parse_csv(self, path: Path) -> List[SubscribedChannel]:
-        """Fallback: read CSV or TSV."""
+        """Read CSV or TSV subscription exports."""
         subs = []
         try:
             delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
