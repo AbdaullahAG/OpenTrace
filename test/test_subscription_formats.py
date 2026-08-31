@@ -73,6 +73,7 @@ def test_parse_tsv_subscriptions(tmp_path):
     assert result[0].channel_url == "https://www.youtube.com/channel/UC123"
     assert result[0].channel_title == "Example Channel"
 
+
 def test_find_xls_subscriptions_does_not_text_scan_binary_file(
     tmp_path, monkeypatch
 ):
@@ -101,6 +102,7 @@ def test_find_xls_subscriptions_does_not_text_scan_binary_file(
     dispatcher._find_subscriptions(tmp_path)
 
     assert not text_scan_attempted
+
 
 def test_find_xls_subscriptions_from_workbook(tmp_path, monkeypatch):
     subscriptions = tmp_path / "subscriptions.xls"
@@ -135,4 +137,101 @@ def test_find_xls_subscriptions_from_workbook(tmp_path, monkeypatch):
     result = dispatcher._find_subscriptions(tmp_path)
 
     assert result == subscriptions
-    
+
+
+def test_find_xlsx_subscriptions_from_workbook(tmp_path, monkeypatch):
+    subscriptions = tmp_path / "subscriptions.xlsx"
+    subscriptions.write_bytes(b"fake-xlsx")
+    closed = False
+
+    class FakeSheet:
+        def iter_rows(self, min_row, max_row, values_only):
+            assert min_row == 1
+            assert max_row == 5
+            assert values_only is True
+            return iter(
+                [
+                    ("Channel Id", "Channel Url", "Channel Title"),
+                    (
+                        "UC123",
+                        "https://www.youtube.com/channel/UC123",
+                        "Example Channel",
+                    ),
+                ]
+            )
+
+    class FakeWorkbook:
+        active = FakeSheet()
+
+        def close(self):
+            nonlocal closed
+            closed = True
+
+    def fake_load_workbook(*, filename, read_only, data_only):
+        assert filename == str(subscriptions)
+        assert read_only is True
+        assert data_only is True
+        return FakeWorkbook()
+
+    monkeypatch.setattr(
+        "app.ingestion.dispatcher.openpyxl.load_workbook",
+        fake_load_workbook,
+    )
+
+    dispatcher = Dispatcher()
+
+    result = dispatcher._find_subscriptions(tmp_path)
+
+    assert result == subscriptions
+    assert closed is True
+
+
+def test_parse_xlsx_subscriptions(tmp_path, monkeypatch):
+    subscriptions = tmp_path / "subscriptions.xlsx"
+    subscriptions.write_bytes(b"fake-xlsx")
+    closed = False
+
+    class FakeSheet:
+        def iter_rows(self, min_row, values_only):
+            assert min_row == 2
+            assert values_only is True
+            return iter(
+                [
+                    (
+                        "UC123",
+                        "https://www.youtube.com/channel/UC123",
+                        "Example Channel",
+                    ),
+                ]
+            )
+
+    class FakeWorkbook:
+        active = FakeSheet()
+
+        def close(self):
+            nonlocal closed
+            closed = True
+
+    def fake_load_workbook(*, filename, read_only, data_only):
+        assert filename == str(subscriptions)
+        assert read_only is True
+        assert data_only is True
+        return FakeWorkbook()
+
+    monkeypatch.setattr(
+        "app.ingestion.youtube_parser.openpyxl.load_workbook",
+        fake_load_workbook,
+    )
+
+    parser = YoutubeParser(
+        watch_history_path="unused.json",
+        subscriptions_path=str(subscriptions),
+    )
+
+    result = parser.parse_subscriptions()
+
+    assert len(result) == 1
+    assert result[0].channel_id == "UC123"
+    assert result[0].channel_url == "https://www.youtube.com/channel/UC123"
+    assert result[0].channel_title == "Example Channel"
+    assert closed is True
