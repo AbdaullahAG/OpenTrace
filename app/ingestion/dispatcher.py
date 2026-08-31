@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 import xlrd
+import openpyxl
 
 from app.models import FilteredDataset
 from app.ingestion.youtube_parser import YoutubeParser
@@ -200,5 +201,30 @@ class Dispatcher:
                         return f
             except Exception:
                 continue
+
+        # Modern Excel subscription exports
+        for f in root.rglob("*.xlsx"):
+            workbook = None
+            try:
+                workbook = openpyxl.load_workbook(
+                    filename=str(f),
+                    read_only=True,
+                    data_only=True,
+                )
+                sheet = workbook.active
+
+                for row in sheet.iter_rows(
+                    min_row=1,
+                    max_row=5,
+                    values_only=True,
+                ):
+                    sample = " ".join(str(value) for value in row if value is not None)
+                    if "UC" in sample and "youtube.com/channel" in sample:
+                        return f
+            except Exception:
+                continue
+            finally:
+                if workbook is not None:
+                    workbook.close()
 
         return None
